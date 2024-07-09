@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artifactory-oss-entrypoint
+  labels:
+    {{- include "artifactory-oss.labels" . | nindent 4 }}
+data:
+  run.sh: |-
+    #!/bin/bash
+
+    set -eu
+
+    # Artifactory needs to encrypt sensitive details such as join keys and database passwords, and
+    # save those changes on the file system. Since secrets are mounted to read-only volumes, there
+    # will be read-only file system errors. To work around this, we don't directly mount secrets to
+    # the destinations expected by Artifactory. Rather, we mount them to intermediate volumes and then
+    # copy them to the target directories where Artifactory expects them.
+    copySecrets() {
+      local artifactory_home=/opt/jfrog/artifactory
+
+      mkdir -p ${artifactory_home}/var/etc/security
+
+      cp /run/secrets/artifactory/oss/join.key ${artifactory_home}/var/etc/security/join.key
+      cp /run/secrets/artifactory/oss/master.key ${artifactory_home}/var/etc/security/master.key
+
+      cp /run/secrets/artifactory/oss/system.yaml ${artifactory_home}/var/etc/system.yaml
+
+      chown -R "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" ${artifactory_home}/var
+    }
+
+    copySecrets
+    /entrypoint-artifactory.sh
+

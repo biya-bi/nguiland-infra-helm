@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artifactory-postgres-initdb
+  labels:
+	{{- include "artifactory-postgres.labels" . | nindent 4 }}
+data:
+  create-extra-databases.sh: |-
+    #!/bin/bash
+
+    set -e
+
+    process_sql() {
+    	local query_runner=( psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER}" --no-password --no-psqlrc )
+    	if [ -n "${POSTGRES_DB}" ]; then
+    		query_runner+=( --dbname "${POSTGRES_DB}" )
+    	fi
+
+    	PGHOST= PGHOSTADDR= "${query_runner[@]}" "$@"
+    }
+
+    create_database() {
+    	local database=$1
+    	local exists="$(
+    		POSTGRES_DB= process_sql --dbname postgres --set db="${database}" --tuples-only <<-'EOSQL'
+    			SELECT 1 FROM pg_database WHERE datname = :'db' ;
+    		EOSQL
+    	)"
+    	if [ -z "${exists}" ]; then
+    		POSTGRES_DB= process_sql --dbname postgres --set db="${database}" <<-'EOSQL'
+    			CREATE DATABASE :"db" ;
+    		EOSQL
+    		printf '\n'
+    	fi
+    }
+
+    get_databases() {
+    	local databases_file=`echo "${1:-}" | xargs`
+    	if [ -n "${databases_file}" ]; then
+    		if [ -f "${databases_file}" ]; then
+    			# Read the first non-empty line
+    			local databases=`grep -m 1 . ${databases_file}`
+    			echo "${databases}" | xargs
+    		elif [ -d "${databases_file}" ]; then
+          # Error: The specified path is a directory
+    			exit 1
+    		else
+    			# Error: The file does not exist
+    			exit 1
+    		fi
+    	fi
+    }
+
+    create_databases() {
+    	local databases=`get_databases ${1:-}`
+    	if [ -n "${databases}" ]; then
+    		for database in $(echo ${databases}| tr ',' ' '); do
+    			create_database ${database}
+    		done
+    	fi
+    }
+
+    create_databases "${POSTGRES_EXTRA_DBS_FILE:-}"
