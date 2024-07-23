@@ -1,4 +1,4 @@
-# Default values for artifactory-postgres.
+# Default values for postgres.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -99,29 +99,29 @@ autoscaling:
 
 volumes:
   - configMap:
-      name: artifactory-postgres-initdb
+      name: postgres-initdb
       defaultMode: 0755
-    name: artifactory-postgres-initdb
+    name: postgres-initdb
   - configMap:
-      name: artifactory-postgres-probe
+      name: postgres-probe
       defaultMode: 0755
-    name: artifactory-postgres-probe
-  - name: artifactory-postgres-data
+    name: postgres-probe
+  - name: postgres-data
     persistentVolumeClaim:
-      claimName: artifactory-postgres-data
+      claimName: postgres-data
   - secret:
-      secretName: artifactory-postgres
-    name: artifactory-postgres-secret
+      secretName: postgres
+    name: postgres-secret
 
 volumeMounts:
-  - name: artifactory-postgres-initdb
+  - name: postgres-initdb
     mountPath: /docker-entrypoint-initdb.d
-  - name: artifactory-postgres-probe
+  - name: postgres-probe
     mountPath: /run/scripts/postgres/is-ready.sh     
     subPath: is-ready.sh
-  - name: artifactory-postgres-data
+  - name: postgres-data
     mountPath: /var/lib/postgresql/data
-  - name: artifactory-postgres-secret
+  - name: postgres-secret
     mountPath: /run/secrets/postgres
     readOnly: true
 

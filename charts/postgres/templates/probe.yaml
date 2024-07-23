@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: artifactory-postgres-probe
+  name: postgres-probe
   labels:
-    {{- include "artifactory-postgres.labels" . | nindent 4 }}
+    {{- include "postgres.labels" . | nindent 4 }}
 data:
   is-ready.sh: |-
     #!/bin/bash

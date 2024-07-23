@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "artifactory-postgres.fullname" . }}
+  name: {{ include "postgres.fullname" . }}
   labels:
-    {{- include "artifactory-postgres.labels" . | nindent 4 }}
+    {{- include "postgres.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "artifactory-postgres.fullname" . }}
+    name: {{ include "postgres.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

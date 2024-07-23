@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: artifactory-postgres-initdb
+  name: postgres-initdb
   labels:
-	{{- include "artifactory-postgres.labels" . | nindent 4 }}
+	{{- include "postgres.labels" . | nindent 4 }}
 data:
   create-extra-databases.sh: |-
     #!/bin/bash
