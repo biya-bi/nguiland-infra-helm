@@ -135,7 +135,8 @@ env:
     value: /run/secrets/console/password
   - name: KC_DB
     value: postgres
-
+  - name: KC_PROXY
+    value: edge
 entryPoint:
   command: ["/opt/keycloak/bin/run.sh"]
   args: ["start-dev"]
