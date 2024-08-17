@@ -44,7 +44,7 @@ service:
   port: 8082
   nodePort: 30000
 ingress:
-  enabled: true
+  enabled: false
   className: ""
   annotations:
     kubernetes.io/ingress.class: nginx
