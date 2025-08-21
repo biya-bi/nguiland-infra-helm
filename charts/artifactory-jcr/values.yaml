@@ -110,6 +110,9 @@ volumeMounts:
     name: artifactory-jcr-data
   - mountPath: /run/secrets/artifactory/jcr
     name: artifactory-jcr-secret
+  - mountPath: /run/secrets/artifactory/access/bootstrap.creds
+    subPath: bootstrap.creds
+    name: artifactory-jcr-secret
 
 nodeSelector: {}
 

@@ -26,6 +26,12 @@ data:
       cp /run/secrets/artifactory/oss/system.yaml ${artifactory_home}/var/etc/system.yaml
 
       chown -R "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" ${artifactory_home}/var
+
+      mkdir -p "${artifactory_home}"/var/etc/access
+      local bootstrap_creds="${artifactory_home}"/var/etc/access/bootstrap.creds
+      cp /run/secrets/artifactory/access/bootstrap.creds "${bootstrap_creds}"
+      chmod 600 "${bootstrap_creds}"
+      chown "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" "${bootstrap_creds}"
     }
 
     copySecrets

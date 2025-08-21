@@ -110,6 +110,9 @@ volumeMounts:
     name: artifactory-oss-data
   - mountPath: /run/secrets/artifactory/oss
     name: artifactory-oss-secret
+  - mountPath: /run/secrets/artifactory/access/bootstrap.creds
+    subPath: bootstrap.creds
+    name: artifactory-oss-secret
 
 nodeSelector: {}
 
