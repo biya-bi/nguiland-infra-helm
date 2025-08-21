@@ -16,19 +16,17 @@ data:
     # the destinations expected by Artifactory. Rather, we mount them to intermediate volumes and then
     # copy them to the target directories where Artifactory expects them.
     copySecrets() {
-      local artifactory_home=/opt/jfrog/artifactory
+      mkdir -p "${JF_PRODUCT_HOME}"/var/etc/security
 
-      mkdir -p ${artifactory_home}/var/etc/security
+      cp /run/secrets/artifactory/jcr/join.key "${JF_PRODUCT_HOME}"/var/etc/security/join.key
+      cp /run/secrets/artifactory/jcr/master.key "${JF_PRODUCT_HOME}"/var/etc/security/master.key
 
-      cp /run/secrets/artifactory/jcr/join.key ${artifactory_home}/var/etc/security/join.key
-      cp /run/secrets/artifactory/jcr/master.key ${artifactory_home}/var/etc/security/master.key
+      cp /run/secrets/artifactory/jcr/system.yaml "${JF_PRODUCT_HOME}"/var/etc/system.yaml
 
-      cp /run/secrets/artifactory/jcr/system.yaml ${artifactory_home}/var/etc/system.yaml
+      chown -R "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" "${JF_PRODUCT_HOME}"/var
 
-      chown -R "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" ${artifactory_home}/var
-
-      mkdir -p "${artifactory_home}"/var/etc/access
-      local bootstrap_creds="${artifactory_home}"/var/etc/access/bootstrap.creds
+      mkdir -p "${JF_PRODUCT_HOME}"/var/etc/access
+      local bootstrap_creds="${JF_PRODUCT_HOME}"/var/etc/access/bootstrap.creds
       cp /run/secrets/artifactory/access/bootstrap.creds "${bootstrap_creds}"
       chmod 600 "${bootstrap_creds}"
       chown "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" "${bootstrap_creds}"
