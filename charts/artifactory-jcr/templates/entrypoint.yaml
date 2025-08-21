@@ -15,23 +15,54 @@ data:
     # will be read-only file system errors. To work around this, we don't directly mount secrets to
     # the destinations expected by Artifactory. Rather, we mount them to intermediate volumes and then
     # copy them to the target directories where Artifactory expects them.
-    copySecrets() {
-      mkdir -p "${JF_PRODUCT_HOME}"/var/etc/security
 
-      cp /run/secrets/artifactory/jcr/join.key "${JF_PRODUCT_HOME}"/var/etc/security/join.key
-      cp /run/secrets/artifactory/jcr/master.key "${JF_PRODUCT_HOME}"/var/etc/security/master.key
+    set_file_ownership() {
+      local file="$1"
+      chmod 600 "${file}"
+      chown "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" "${file}"
+    }
 
-      cp /run/secrets/artifactory/jcr/system.yaml "${JF_PRODUCT_HOME}"/var/etc/system.yaml
+    copy_keys() {
+      local system_name="$1"
 
-      chown -R "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" "${JF_PRODUCT_HOME}"/var
+      local security_dir="${JF_PRODUCT_HOME}"/var/etc/security
 
-      mkdir -p "${JF_PRODUCT_HOME}"/var/etc/access
-      local bootstrap_creds="${JF_PRODUCT_HOME}"/var/etc/access/bootstrap.creds
+      mkdir -p "${security_dir}"
+
+      local join_key="${security_dir}"/join.key
+      cp /run/secrets/artifactory/"${system_name}"/join.key "${join_key}"
+      $(set_file_ownership "${join_key}")
+
+      local master_key="${security_dir}"/master.key
+      cp /run/secrets/artifactory/"${system_name}"/master.key "${master_key}"
+      $(set_file_ownership "${master_key}")
+    }
+
+    copy_system_yaml() {
+      local system_name="$1"
+
+      local etc_dir="${JF_PRODUCT_HOME}"/var/etc
+
+      mkdir -p "${etc_dir}"
+
+      cp /run/secrets/artifactory/"${system_name}"/system.yaml "${etc_dir}"/system.yaml
+    }
+
+    copy_bootstrap_creds() {
+      local access_dir="${JF_PRODUCT_HOME}"/var/etc/access
+
+      mkdir -p "${access_dir}"
+
+      local bootstrap_creds="${access_dir}"/bootstrap.creds
+
       cp /run/secrets/artifactory/access/bootstrap.creds "${bootstrap_creds}"
+
       chmod 600 "${bootstrap_creds}"
       chown "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" "${bootstrap_creds}"
     }
 
-    copySecrets
+    copy_keys "jcr"
+    copy_system_yaml "jcr"
+    copy_bootstrap_creds
     /entrypoint-artifactory.sh
 
