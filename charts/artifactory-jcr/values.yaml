@@ -101,6 +101,9 @@ volumes:
   - secret:
       secretName: artifactory-jcr
     name: artifactory-jcr-secret
+  - configMap:
+      name: artifactory-jcr-config
+    name: artifactory-jcr-config
 
 volumeMounts:
   - mountPath: /opt/jfrog/artifactory/scripts/run.sh
@@ -113,6 +116,9 @@ volumeMounts:
   - mountPath: /run/secrets/artifactory/access/bootstrap.creds
     subPath: bootstrap.creds
     name: artifactory-jcr-secret
+  - mountPath: /opt/jfrog/artifactory/var/etc/artifactory/artifactory.config.import.yml
+    subPath: artifactory.config.import.yml
+    name: artifactory-jcr-config
 
 nodeSelector: {}
 
