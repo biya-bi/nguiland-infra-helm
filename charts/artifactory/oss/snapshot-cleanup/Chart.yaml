@@ -1,0 +1,5 @@
+apiVersion: v2
+name: artifactory-oss-snapshot-cleanup
+description: A Helm chart for Artifactory OSS snapshot cleanup
+version: 0.1.0
+appVersion: "0.1.0"
