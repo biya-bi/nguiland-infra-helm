@@ -34,6 +34,8 @@ spec:
                 {{- toYaml . | nindent 16 }}
               {{- end }}
               env:
+                - name: ART_OSS_URL
+                  value: {{ .Values.artOssUrl | quote }}
                 {{- range $name, $value := .Values.envMap }}
                 - name: {{ $name }}
                   value: {{ $value | quote }}

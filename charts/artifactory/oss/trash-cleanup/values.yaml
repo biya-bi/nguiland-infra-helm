@@ -38,8 +38,6 @@ envSecrets:
 script: |
     set -euo pipefail
 
-    ART_OSS_URL="{{ .Values.artOssUrl }}"
-
     echo "=== Safe Trash Cleanup ==="
 
     NOW=$(date +%s)

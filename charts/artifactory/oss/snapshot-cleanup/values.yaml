@@ -43,8 +43,6 @@ envSecrets:
 script: |
   set -euo pipefail
 
-  ART_OSS_URL="{{ .Values.artOssUrl }}"
-
   echo "=== Artifactory Snapshot Cleanup ==="
   echo "Dry run: $DRY_RUN"
 
