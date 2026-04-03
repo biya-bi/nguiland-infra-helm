@@ -17,6 +17,7 @@
    kubectl get cronjob {{ include "artifactory-oss-snapshot-cleanup.fullname" . }} -n {{ .Release.Namespace }}
 
 2. View the current configuration:
+   Target Artifactory: {{ .Values.artOssUrl }}
    Target Repository: {{ .Values.envMap.REPO }}
    Keep Strategy:     Last {{ .Values.envMap.KEEP }} builds
    Max Age:           {{ .Values.envMap.MAX_AGE_HOURS }} hours
