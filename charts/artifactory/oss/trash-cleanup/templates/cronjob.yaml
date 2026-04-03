@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "artifactory-oss-trash-cleanup.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "artifactory-oss-trash-cleanup.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 1800
+  suspend: false
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3300
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          activeDeadlineSeconds: 3600
+          terminationGracePeriodSeconds: 30
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: cleanup
+              image: {{ printf "%s/%s:%s" .Values.imagePullEndpoint .Values.image.repository .Values.image.tag | quote }}
+              imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+              {{- with .Values.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              env:
+                {{- range $name, $value := .Values.envMap }}
+                - name: {{ $name }}
+                  value: {{ $value | quote }}
+                {{- end }}
+                {{- with .Values.envSecrets }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              command: ["/bin/sh", "-c"]
+              args:
+                - {{ .Values.script | quote }}
