@@ -292,7 +292,7 @@ script: |
         p, total, skipped_latest, skipped_protected, skipped_keep, skipped_new, deleted) > "/dev/stderr"
     }
   }' \
-  | grep -v '^$' \
+  | grep -v '^$' || true \
   | sort -u > delete.txt   # SAFETY: deduplicate
 
   DELETE_COUNT=$(grep -c . delete.txt || true)
