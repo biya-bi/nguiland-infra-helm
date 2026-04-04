@@ -25,8 +25,12 @@ spec:
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | default dict | nindent 12 }}
           containers:
             - name: cleanup
+              securityContext:
+                {{- toYaml .Values.securityContext | default dict | nindent 16 }}
               image: {{ printf "%s/%s:%s" .Values.imagePullEndpoint .Values.image.repository .Values.image.tag | quote }}
               imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
               {{- with .Values.resources }}

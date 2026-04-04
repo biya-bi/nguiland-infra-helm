@@ -35,6 +35,12 @@ envSecrets:
         name: artifactory-oss
         key: password
 
+podSecurityContext: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+
 script: |
     set -euo pipefail
 
