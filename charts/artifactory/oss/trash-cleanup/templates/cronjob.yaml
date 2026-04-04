@@ -18,7 +18,7 @@ spec:
       backoffLimit: 2
       template:
         spec:
-          restartPolicy: OnFailure
+          restartPolicy: Never
           activeDeadlineSeconds: 3600
           terminationGracePeriodSeconds: 30
           {{- with .Values.imagePullSecrets }}
