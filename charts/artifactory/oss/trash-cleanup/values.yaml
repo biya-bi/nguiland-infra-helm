@@ -44,6 +44,9 @@ securityContext:
 script: |
     set -euo pipefail
 
+    # Change to a writable directory since some base images have read-only root filesystems
+    cd /tmp
+
     echo "=== Safe Trash Cleanup ==="
 
     NOW=$(date +%s)
