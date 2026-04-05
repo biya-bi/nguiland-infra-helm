@@ -125,3 +125,7 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+envMap:
+  JF_OBSERVABILITY_SKIP_METADATA_MIGRATION: "true"
+  JF_ROUTER_OBSERVABILITY_ENABLED: "false"
