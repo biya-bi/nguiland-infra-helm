@@ -28,16 +28,15 @@ serviceAccount:
 podAnnotations: {}
 podLabels: {}
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext:
+  fsGroup: 1030
+  runAsUser: 1030
+  runAsGroup: 1030
+  fsGroupChangePolicy: Always
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
 
 service:
   type: ClusterIP
@@ -103,6 +102,7 @@ volumes:
     name: artifactory-oss-secret
   - configMap:
       name: artifactory-oss-config
+      defaultMode: 0644
     name: artifactory-oss-config
 
 volumeMounts:
