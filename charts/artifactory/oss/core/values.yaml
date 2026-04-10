@@ -7,4 +7,5 @@ image:
 
 service:
   port: 8082
+  targetPort: 8082
   name: artossport
