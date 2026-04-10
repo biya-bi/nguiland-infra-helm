@@ -1,0 +1,6 @@
+dependencies:
+- name: artifactory-common
+  repository: file://../../common
+  version: 0.1.0
+digest: sha256:b96d7861e27ec5945fb3ce3e2ad918d579d9dc1ad98e9655751c3953a33e4735
+generated: "2026-04-09T21:38:53.963102-04:00"

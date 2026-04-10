@@ -1,0 +1,5 @@
+apiVersion: v2
+name: artifactory-common
+description: A Library chart for Artifactory
+type: library
+version: 0.1.0

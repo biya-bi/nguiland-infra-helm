@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "artifactory-oss.name" -}}
+{{- define "artifactory-common.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "artifactory-oss.fullname" -}}
+{{- define "artifactory-common.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "artifactory-oss.chart" -}}
+{{- define "artifactory-common.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "artifactory-oss.labels" -}}
-helm.sh/chart: {{ include "artifactory-oss.chart" . }}
-{{ include "artifactory-oss.selectorLabels" . }}
+{{- define "artifactory-common.labels" -}}
+helm.sh/chart: {{ include "artifactory-common.chart" . }}
+{{ include "artifactory-common.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,18 +45,19 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "artifactory-oss.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "artifactory-oss.name" . }}
+{{- define "artifactory-common.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "artifactory-common.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "artifactory-oss.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "artifactory-oss.fullname" .) .Values.serviceAccount.name }}
+{{- define "artifactory-common.serviceAccountName" -}}
+{{- $sa := .Values.serviceAccount | default dict -}}
+{{- if $sa.create }}
+{{- default (include "artifactory-common.fullname" .) $sa.name }}
 {{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{- default "default" $sa.name }}
 {{- end }}
 {{- end }}

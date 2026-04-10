@@ -1,0 +1,14 @@
+{{- define "artifactory-common.data" -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "artifactory-common.fullname" . }}-data
+  labels:
+    {{- include "artifactory-common.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+{{- end -}}

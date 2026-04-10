@@ -1,1 +1,15 @@
+HELP.md
 .DS_Store
+
+# Various IDEs
+.project
+.idea/
+*.tmproj
+.vscode/
+
+# Helm
+**/tmpcharts/
+*.tgz
+
+# Generated local schema copies
+charts/artifactory/*/core/values.schema.json

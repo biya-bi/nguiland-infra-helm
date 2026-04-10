@@ -1,0 +1,12 @@
+# Default values for the artifactory-common library chart.
+
+systemName: artifactory
+
+image:
+  repository: releases-docker.jfrog.io/jfrog/artifactory
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  port: 8081
+  name: artifactoryport

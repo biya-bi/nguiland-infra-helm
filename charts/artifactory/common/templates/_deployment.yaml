@@ -1,0 +1,126 @@
+{{- define "artifactory-common.deployment" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "artifactory-common.fullname" . }}
+  labels:
+    {{- include "artifactory-common.labels" . | nindent 4 }}
+spec:
+  {{- if not (and .Values.autoscaling .Values.autoscaling.enabled) }}
+  replicas: {{ .Values.replicaCount | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "artifactory-common.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations | default (dict) }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "artifactory-common.labels" . | nindent 8 }}
+        {{- with .Values.podLabels | default (dict) }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "artifactory-common.serviceAccountName" . }}
+      securityContext:
+        {{- $podSec := .Values.podSecurityContext | default dict -}}
+        {{- $_ := merge $podSec (dict "fsGroup" 1030 "runAsUser" 1030 "runAsGroup" 1030 "fsGroupChangePolicy" "OnRootMismatchOnly") -}}
+        {{- toYaml $podSec | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          command:
+            {{- toYaml (.Values.commands | default (list "/opt/jfrog/artifactory/scripts/run.sh")) | nindent 12 }}
+          securityContext:
+            {{- $contSec := .Values.securityContext | default dict -}}
+            {{- $_ := merge $contSec (dict "runAsNonRoot" true "allowPrivilegeEscalation" false) -}}
+            {{- toYaml $contSec | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: {{ .Values.service.name }}
+              containerPort: {{ .Values.service.port }}
+              protocol: {{ .Values.service.protocol | default "TCP" }}
+          livenessProbe:
+            {{- $lp := .Values.livenessProbe | default dict -}}
+            {{- $lpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/liveness" "port" .Values.service.port) "initialDelaySeconds" 180 "periodSeconds" 10 -}}
+            {{- $_ := merge $lp $lpDefault -}}
+            {{- toYaml $lp | nindent 12 }}
+          readinessProbe:
+            {{- $rp := .Values.readinessProbe | default dict -}}
+            {{- $rpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/readiness" "port" .Values.service.port) "initialDelaySeconds" 60 "periodSeconds" 10 -}}
+            {{- $_ := merge $rp $rpDefault -}}
+            {{- toYaml $rp | nindent 12 }}
+          resources:
+            {{- $res := .Values.resources | default dict -}}
+            {{- $resDefault := dict "requests" (dict "cpu" "500m" "memory" "1Gi") "limits" (dict "cpu" "1000m" "memory" "2Gi") -}}
+            {{- $_ := merge $res $resDefault -}}
+            {{- toYaml $res | nindent 12 }}
+          volumeMounts:
+            - mountPath: /opt/jfrog/artifactory/scripts/run.sh
+              name: {{ include "artifactory-common.fullname" . }}-entrypoint
+              subPath: run.sh
+            - mountPath: /opt/jfrog/artifactory/var
+              name: {{ include "artifactory-common.fullname" . }}-data
+            - mountPath: /run/secrets/artifactory/{{ .Values.systemName }}
+              name: {{ include "artifactory-common.fullname" . }}-secret
+            - mountPath: /run/secrets/artifactory/access/bootstrap.creds
+              subPath: bootstrap.creds
+              name: {{ include "artifactory-common.fullname" . }}-secret
+            - mountPath: /opt/jfrog/artifactory/var/etc/artifactory/artifactory.config.import.yml
+              subPath: artifactory.config.import.yml
+              name: {{ include "artifactory-common.fullname" . }}-config
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            {{- $defaultEnv := dict "JF_PRODUCT_HOME" "/opt/jfrog/artifactory" "JF_ARTIFACTORY_USER" "artifactory" "JF_OBSERVABILITY_SKIP_METADATA_MIGRATION" "true" "JF_ROUTER_OBSERVABILITY_ENABLED" "false" -}}
+            {{- $envMap := .Values.envMap | default dict -}}
+            {{- $_ := merge $envMap $defaultEnv -}}
+            {{- range $name, $value := $envMap }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- if .Values.extraEnv }}
+            {{- toYaml .Values.extraEnv | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: {{ include "artifactory-common.fullname" . }}-entrypoint
+          configMap:
+            name: {{ include "artifactory-common.fullname" . }}-entrypoint
+            defaultMode: 0755
+            items:
+              - key: run.sh
+                path: run.sh
+        - name: {{ include "artifactory-common.fullname" . }}-data
+          persistentVolumeClaim:
+            claimName: {{ include "artifactory-common.fullname" . }}-data
+        - name: {{ include "artifactory-common.fullname" . }}-secret
+          secret:
+            secretName: {{ include "artifactory-common.fullname" . }}
+        - name: {{ include "artifactory-common.fullname" . }}-config
+          configMap:
+            name: {{ include "artifactory-common.fullname" . }}-config
+            defaultMode: 0644
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end -}}

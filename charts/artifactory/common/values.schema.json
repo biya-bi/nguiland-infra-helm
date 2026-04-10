@@ -1,0 +1,125 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "default": 1,
+      "description": "Number of desired pods."
+    },
+    "ingress": {
+      "type": "object",
+      "description": "Ingress configuration for exposing Artifactory.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable ingress controller resource."
+        },
+        "className": {
+          "type": "string",
+          "description": "IngressClass to use (e.g. nginx).",
+          "default": ""
+        },
+        "annotations": {
+          "type": "object",
+          "description": "Additional annotations for the Ingress resource.",
+          "default": {}
+        }
+      }
+    },
+    "autoscaling": {
+      "type": "object",
+      "description": "HPA configuration.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Horizontal Pod Autoscaler."
+        },
+        "minReplicas": {
+          "type": "integer",
+          "default": 1,
+          "description": "Minimum number of replicas for autoscaling."
+        },
+        "maxReplicas": {
+          "type": "integer",
+          "default": 5,
+          "description": "Maximum number of replicas for autoscaling."
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "description": "Image configuration for the Artifactory container.",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "description": "Container image repository."
+        },
+        "pullPolicy": {
+          "type": "string",
+          "default": "IfNotPresent",
+          "description": "Image pull policy for the Artifactory container."
+        },
+        "tag": {
+          "type": "string",
+          "default": "",
+          "description": "Overrides the image tag. Defaults to the chart's appVersion if empty."
+        }
+      },
+      "required": [
+        "repository"
+      ]
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "default": [],
+      "description": "Secrets used to pull images from private registries."
+    },
+    "nameOverride": {
+      "type": "string",
+      "default": "",
+      "description": "Override the chart name used in resource names."
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "default": "",
+      "description": "Override the full resource name."
+    },
+    "volumes": {
+      "type": "array",
+      "default": [],
+      "description": "Additional pod volumes to mount."
+    },
+    "volumeMounts": {
+      "type": "array",
+      "default": [],
+      "description": "Additional volume mounts for the pod."
+    },
+    "nodeSelector": {
+      "type": "object",
+      "default": {},
+      "description": "Node selector labels for scheduling pods."
+    },
+    "tolerations": {
+      "type": "array",
+      "default": [],
+      "description": "Node taints the pods should tolerate."
+    },
+    "affinity": {
+      "type": "object",
+      "default": {},
+      "description": "Affinity rules for pod placement."
+    },
+    "envMap": {
+      "type": "object",
+      "default": {},
+      "description": "Additional environment variables for Artifactory."
+    }
+  },
+  "required": [
+    "systemName",
+    "service",
+    "image"
+  ]
+}

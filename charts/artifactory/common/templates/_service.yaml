@@ -1,0 +1,21 @@
+{{- define "artifactory-common.service" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "artifactory-common.fullname" . }}
+  labels:
+    {{- include "artifactory-common.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type | default "ClusterIP" }}
+  ports:
+    {{- if .Values.service.ports }}
+    {{- toYaml .Values.service.ports | nindent 4 }}
+    {{- else }}
+    - port: {{ .Values.service.port | default 80 }}
+      targetPort: {{ .Values.service.targetPort | default "http" }}
+      protocol: {{ .Values.service.protocol | default "TCP" }}
+      name: {{ .Values.service.name | default "http" }}
+    {{- end }}
+  selector:
+    {{- include "artifactory-common.selectorLabels" . | nindent 4 }}
+{{- end -}}
