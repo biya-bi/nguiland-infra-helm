@@ -31,7 +31,7 @@ spec:
       serviceAccountName: {{ include "artifactory-common.serviceAccountName" . }}
       securityContext:
         {{- $podSec := .Values.podSecurityContext | default dict -}}
-        {{- $_ := merge $podSec (dict "fsGroup" 1030 "runAsUser" 1030 "runAsGroup" 1030 "fsGroupChangePolicy" "OnRootMismatchOnly") -}}
+        {{- $_ := merge $podSec (dict "fsGroup" 1030 "runAsUser" 1030 "runAsGroup" 1030 "fsGroupChangePolicy" "OnRootMismatch") -}}
         {{- toYaml $podSec | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
