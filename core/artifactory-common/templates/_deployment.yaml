@@ -14,13 +14,13 @@ spec:
       {{- include "artifactory-common.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations | default (dict) }}
+      {{- with .Values.podAnnotations | default dict }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
         {{- include "artifactory-common.labels" . | nindent 8 }}
-        {{- with .Values.podLabels | default (dict) }}
+        {{- with .Values.podLabels | default dict }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
