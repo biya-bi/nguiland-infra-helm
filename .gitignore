@@ -12,4 +12,5 @@ HELP.md
 *.tgz
 
 # Generated local schema copies
-charts/artifactory/*/core/values.schema.json
+core/artifactory-jcr/values.schema.json
+core/artifactory-oss/values.schema.json

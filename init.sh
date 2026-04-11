@@ -2,5 +2,5 @@
 set -e
 
 # Copy schemas
-cp charts/artifactory/common/values.schema.json charts/artifactory/oss/core/values.schema.json
-cp charts/artifactory/common/values.schema.json charts/artifactory/jcr/core/values.schema.json
+cp core/artifactory-common/values.schema.json core/artifactory-oss/values.schema.json
+cp core/artifactory-common/values.schema.json core/artifactory-jcr/values.schema.json

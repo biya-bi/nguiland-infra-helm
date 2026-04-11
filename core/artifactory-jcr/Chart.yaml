@@ -1,6 +1,6 @@
 apiVersion: v2
-name: artifactory-oss
-description: A Helm chart for Artifactory OSS
+name: artifactory-jcr
+description: A Helm chart for Artifactory JCR
 type: application
 version: 0.1.0
 appVersion: "7.84.23"
@@ -8,4 +8,4 @@ appVersion: "7.84.23"
 dependencies:
   - name: artifactory-common
     version: 0.1.0
-    repository: file://../../common
+    repository: file://../artifactory-common

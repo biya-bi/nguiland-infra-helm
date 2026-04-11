@@ -4,11 +4,12 @@ param()
 
 $ErrorActionPreference = 'Stop'
 
+# Copy schemas
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$source = Join-Path $scriptRoot 'charts\artifactory\common\values.schema.json'
+$source = Join-Path $scriptRoot 'core\artifactory-common\values.schema.json'
 $targets = @(
-    Join-Path $scriptRoot 'charts\artifactory\oss\core\values.schema.json',
-    Join-Path $scriptRoot 'charts\artifactory\jcr\core\values.schema.json'
+    Join-Path $scriptRoot 'core\artifactory-oss\values.schema.json',
+    Join-Path $scriptRoot 'core\artifactory-jcr\values.schema.json'
 )
 
 foreach ($target in $targets) {
