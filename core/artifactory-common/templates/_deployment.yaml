@@ -75,12 +75,12 @@ spec:
               protocol: {{ .Values.service.protocol | default "TCP" }}
           livenessProbe:
             {{- $lp := .Values.livenessProbe | default dict -}}
-            {{- $lpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/liveness" "port" .Values.service.port) "initialDelaySeconds" 180 "periodSeconds" 10 -}}
+            {{- $lpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 180 "periodSeconds" 10 -}}
             {{- $_ := merge $lp $lpDefault -}}
             {{- toYaml $lp | nindent 12 }}
           readinessProbe:
             {{- $rp := .Values.readinessProbe | default dict -}}
-            {{- $rpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/readiness" "port" .Values.service.port) "initialDelaySeconds" 60 "periodSeconds" 10 -}}
+            {{- $rpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 60 "periodSeconds" 10 -}}
             {{- $_ := merge $rp $rpDefault -}}
             {{- toYaml $rp | nindent 12 }}
           resources:
