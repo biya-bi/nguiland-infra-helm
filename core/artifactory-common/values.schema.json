@@ -76,6 +76,17 @@
       "default": [],
       "description": "Secrets used to pull images from private registries."
     },
+    "dataChown": {
+      "type": "object",
+      "description": "Configuration for the init container that fixes Artifactory volume ownership.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the init container to chown the Artifactory data volume. Set to false when permissions are already correct."
+        }
+      }
+    },
     "nameOverride": {
       "type": "string",
       "default": "",

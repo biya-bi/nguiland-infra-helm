@@ -33,6 +33,32 @@ spec:
         {{- $podSec := .Values.podSecurityContext | default dict -}}
         {{- $_ := merge $podSec (dict "fsGroup" 1030 "runAsUser" 1030 "runAsGroup" 1030 "fsGroupChangePolicy" "OnRootMismatch") -}}
         {{- toYaml $podSec | nindent 8 }}
+      {{- $dataChownEnabled := true -}}
+      {{- if hasKey .Values "dataChown" -}}
+        {{- if kindIs "map" .Values.dataChown -}}
+          {{- $dataChownEnabled = .Values.dataChown.enabled | default true -}}
+        {{- else -}}
+          {{- $dataChownEnabled = .Values.dataChown -}}
+        {{- end -}}
+      {{- end -}}
+      {{- if $dataChownEnabled }}
+      initContainers:
+        - name: {{ include "artifactory-common.fullname" . }}-init-chown
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          command:
+            - sh
+            - -c
+            - |
+              chown -R 1030:1030 /opt/jfrog/artifactory/var
+              chmod -R u+rwX /opt/jfrog/artifactory/var
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          volumeMounts:
+            - name: {{ include "artifactory-common.fullname" . }}-data
+              mountPath: /opt/jfrog/artifactory/var
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           command:

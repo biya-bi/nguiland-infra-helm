@@ -7,6 +7,11 @@ image:
   pullPolicy: IfNotPresent
   tag: ""
 
+dataChown:
+  # Enable the data ownership correction init container.
+  # Set to false to disable the chown step when the volume already has correct permissions.
+  enabled: true
+
 service:
   port: 8081
   name: artifactoryport
