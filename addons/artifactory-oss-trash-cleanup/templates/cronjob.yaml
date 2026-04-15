@@ -31,7 +31,7 @@ spec:
             - name: cleanup
               securityContext:
                 {{- toYaml .Values.securityContext | default dict | nindent 16 }}
-              image: {{ printf "%s/%s:%s" .Values.imagePullEndpoint .Values.image.repository .Values.image.tag | quote }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
               imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
               {{- with .Values.resources }}
               resources:

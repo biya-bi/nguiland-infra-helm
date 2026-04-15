@@ -27,7 +27,7 @@ spec:
           {{- end }}
           containers:
             - name: cleanup
-              image: {{ printf "%s/%s:%s" .Values.imagePullEndpoint .Values.image.repository .Values.image.tag | quote }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
               imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
               {{- with .Values.resources }}
               resources:

@@ -1,7 +1,5 @@
-imagePullEndpoint: "artifactory-jcr.infra"
-
 image:
-  repository: "docker-local/org.nguiland.infra/alpine-ops-toolkit"
+  repository: "artifactory-jcr.infra.svc.cluster.local:8082/docker-local/org.nguiland.infra/alpine-ops-toolkit"
   pullPolicy: "IfNotPresent"
   tag: "latest"
 
