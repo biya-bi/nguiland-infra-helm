@@ -1,5 +1,5 @@
 image:
-  repository: "artifactory-jcr.infra.svc.cluster.local:8082/docker-local/org.nguiland.infra/alpine-ops-toolkit"
+  repository: "artifactory-jcr.infra/docker-local/org.nguiland.infra/alpine-ops-toolkit"
   pullPolicy: "IfNotPresent"
   tag: "latest"
 
@@ -16,7 +16,7 @@ resources:
 
 schedule: "0 */6 * * *"
 
-artOssUrl: "http://artifactory-oss:8082/artifactory"
+artOssUrl: "http://artifactory-oss.infra:8082/artifactory"
 
 envMap:
   MAX_TRASH_AGE_HOURS: 48
