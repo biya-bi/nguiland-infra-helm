@@ -106,7 +106,7 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
-            {{- $defaultEnv := dict "JF_PRODUCT_HOME" "/opt/jfrog/artifactory" "JF_ARTIFACTORY_USER" "artifactory" "JF_OBSERVABILITY_SKIP_METADATA_MIGRATION" "true" "JF_ROUTER_OBSERVABILITY_ENABLED" "false" -}}
+            {{- $defaultEnv := dict "JF_PRODUCT_HOME" "/opt/jfrog/artifactory" "JF_ARTIFACTORY_USER" "artifactory" -}}
             {{- $envMap := .Values.envMap | default dict -}}
             {{- $envMap = merge $defaultEnv $envMap -}}
             {{- range $name, $value := $envMap }}
