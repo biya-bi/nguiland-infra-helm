@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "artifactory-data-cleanup.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "artifactory-data-cleanup.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - pods
+    - pods/exec
+  verbs:
+    - get
+    - list
+    - create

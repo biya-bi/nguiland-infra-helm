@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "artifactory-data-cleanup.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "artifactory-data-cleanup.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 1800
+  suspend: false
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3300
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          activeDeadlineSeconds: 3600
+          terminationGracePeriodSeconds: 30
+          serviceAccountName: {{ include "artifactory-data-cleanup.fullname" . }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- $podSec := .Values.podSecurityContext | default dict -}}
+            {{- $podSec = merge (dict "fsGroup" 1030 "runAsUser" 1030 "runAsGroup" 1030 "fsGroupChangePolicy" "OnRootMismatch") $podSec -}}
+            {{- toYaml $podSec | nindent 12 }}
+          containers:
+            - name: {{ .Chart.Name }}
+              securityContext:
+                {{- $contSec := .Values.securityContext | default dict -}}
+                {{- $contSec = merge (dict "runAsNonRoot" true "allowPrivilegeEscalation" false) $contSec -}}
+                {{- toYaml $contSec | nindent 16 }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+              {{- with .Values.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              env:
+                - name: SYSTEM_NAMES
+                  value: '{{ join " " .Values.systemNames }}'
+              command:
+                - /bin/bash
+                - -c
+              args:
+                - {{ .Values.script | quote }}

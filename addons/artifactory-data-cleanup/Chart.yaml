@@ -1,0 +1,5 @@
+apiVersion: v2
+name: artifactory-data-cleanup
+description: A Helm chart for Artifactory data cleanup
+version: 0.1.0
+appVersion: "0.1.0"

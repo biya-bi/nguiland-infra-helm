@@ -1,0 +1,25 @@
+=== Artifactory Data Cleanup: {{ .Release.Name }} ===
+
+1. Check the CronJob status:
+   kubectl get cronjob {{ include "artifactory-data-cleanup.fullname" . }} -n {{ .Release.Namespace }}
+
+2. The cleanup script processes the following configured systems:
+{{- with .Values.systemNames }}
+{{- range . }}
+   - {{ . }}
+{{- end }}
+{{- else }}
+   - <no systems configured>
+{{- end }}
+
+3. Trigger a manual cleanup run now:
+   kubectl create job --from=cronjob/{{ include "artifactory-data-cleanup.fullname" . }} {{ include "artifactory-data-cleanup.fullname" . }}-manual-$(date +%s) -n {{ .Release.Namespace }}
+
+4. View logs of the latest run:
+   kubectl logs -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }} --tail=50
+
+NOTE: The cleanup script reads each configured system's
+      /opt/jfrog/artifactory/var/etc/system.yaml via 'kubectl exec'
+      and deletes archived usage data from
+      /opt/jfrog/artifactory/var/data/metadata/usage/archived
+      when observability.consumption.allow is empty.
