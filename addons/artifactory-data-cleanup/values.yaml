@@ -47,8 +47,10 @@ script: |
       return 0
     fi
 
-    local raw_allow=$(grep -A 2 "observability:" "$system_yaml" | grep -A 1 "consumption:" | grep "allow:" | head -1 | sed "s/.*allow: *//")
-    local allow=$(printf '%s\n' "$raw_allow" | sed -e 's/^[[:space:]]*//;s/[[:space:]]*$//' -e 's/"//g' -e "s/'//g")
+    local raw_allow
+    raw_allow=$(grep -A 2 "observability:" "$system_yaml" | grep -A 1 "consumption:" | grep "allow:" | head -1 | sed "s/.*allow: *//")
+    local allow
+    allow=$(printf '%s\n' "$raw_allow" | sed -e 's/^[[:space:]]*//;s/[[:space:]]*$//' -e 's/"//g' -e "s/'//g")
 
     if [ -z "$allow" ]; then
       local archived_dir="$dir/data/metadata/usage/archived"
