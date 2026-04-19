@@ -85,7 +85,7 @@ spec:
             {{- toYaml $rp | nindent 12 }}
           resources:
             {{- $res := .Values.resources | default dict -}}
-            {{- $resDefault := dict "requests" (dict "cpu" "500m" "memory" "1Gi") "limits" (dict "cpu" "1000m" "memory" "2Gi") -}}
+            {{- $resDefault := dict "requests" (dict "cpu" "500m" "memory" "2Gi") "limits" (dict "cpu" "1000m" "memory" "4Gi") -}}
             {{- $res = merge $resDefault $res -}}
             {{- toYaml $res | nindent 12 }}
           volumeMounts:
