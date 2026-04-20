@@ -75,7 +75,7 @@ spec:
               protocol: {{ .Values.service.protocol | default "TCP" }}
           startupProbe:
             {{- $sp := .Values.startupProbe | default dict -}}
-            {{- $spDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "failureThreshold" 30 "periodSeconds" 10 -}}
+            {{- $spDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "failureThreshold" 60 "periodSeconds" 10 -}}
             {{- $sp = merge $spDefault $sp -}}
             {{- toYaml $sp | nindent 12 }}
           livenessProbe:
