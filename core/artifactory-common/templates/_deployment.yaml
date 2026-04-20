@@ -73,14 +73,19 @@ spec:
             - name: {{ .Values.service.name }}
               containerPort: {{ .Values.service.port }}
               protocol: {{ .Values.service.protocol | default "TCP" }}
+          startupProbe:
+            {{- $sp := .Values.startupProbe | default dict -}}
+            {{- $spDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "failureThreshold" 30 "periodSeconds" 10 -}}
+            {{- $sp = merge $spDefault $sp -}}
+            {{- toYaml $sp | nindent 12 }}
           livenessProbe:
             {{- $lp := .Values.livenessProbe | default dict -}}
-            {{- $lpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 180 "periodSeconds" 10 -}}
+            {{- $lpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 10 "periodSeconds" 10 -}}
             {{- $lp = merge $lpDefault $lp -}}
             {{- toYaml $lp | nindent 12 }}
           readinessProbe:
             {{- $rp := .Values.readinessProbe | default dict -}}
-            {{- $rpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 60 "periodSeconds" 10 -}}
+            {{- $rpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 10 "periodSeconds" 10 -}}
             {{- $rp = merge $rpDefault $rp -}}
             {{- toYaml $rp | nindent 12 }}
           resources:
