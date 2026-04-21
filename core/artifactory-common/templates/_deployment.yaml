@@ -6,6 +6,13 @@ metadata:
   labels:
     {{- include "artifactory-common.labels" . | nindent 4 }}
 spec:
+  {{- with .Values.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- else }}
+  strategy:
+    type: Recreate
+  {{- end }}
   {{- if not (and .Values.autoscaling .Values.autoscaling.enabled) }}
   replicas: {{ .Values.replicaCount | default 1 }}
   {{- end }}
