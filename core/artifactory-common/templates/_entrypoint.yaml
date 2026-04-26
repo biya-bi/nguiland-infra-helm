@@ -63,8 +63,46 @@ data:
       chown "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" "${bootstrap_creds}"
     }
 
+    copy_configs() {
+      local source_config="/run/configs/artifactory/artifactory.config.import.yml"
+      local dest_config_dir="${JF_PRODUCT_HOME}/var/etc/artifactory"
+      local dest_config="${dest_config_dir}/artifactory.config.import.yml"
+
+      # Ensure source exists before proceeding
+      if [[ ! -f "$source_config" ]]; then
+        echo "Warning: Source ConfigMap not found at $source_config. Skipping sync."
+        return 0
+      fi
+
+      # Create directory if missing
+      if [[ ! -d "$dest_config_dir" ]]; then
+        mkdir -p "$dest_config_dir"
+      fi
+
+      # 1. Check if the destination exists
+      if [[ ! -f "$dest_config" ]]; then
+        echo "Config not found at destination. Performing initial copy..."
+        cp "$source_config" "$dest_config"
+        chmod 644 "$dest_config"
+      else
+        # 2. Compare checksums
+        local src_sum dest_sum
+        src_sum=$(md5sum "$source_config" | awk '{print $1}')
+        dest_sum=$(md5sum "$dest_config" | awk '{print $1}')
+
+        if [[ "$src_sum" != "$dest_sum" ]]; then
+          echo "Change detected in ConfigMap. Updating local config..."
+          # Use -p to preserve permissions/timestamps during the overwrite
+          cp -p "$source_config" "$dest_config"
+        else
+          echo "No changes detected in config. Skipping copy."
+        fi
+      fi
+    }
+
     copy_keys {{ $systemName | quote }}
     copy_system_yaml {{ $systemName | quote }}
     copy_bootstrap_creds
+    copy_configs
     /entrypoint-artifactory.sh
 {{- end -}}

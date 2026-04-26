@@ -111,7 +111,7 @@ spec:
             - mountPath: /run/secrets/artifactory/access/bootstrap.creds
               subPath: bootstrap.creds
               name: {{ include "artifactory-common.fullname" . }}-secret
-            - mountPath: /opt/jfrog/artifactory/var/etc/artifactory/artifactory.config.import.yml
+            - mountPath: /run/configs/artifactory/artifactory.config.import.yml
               subPath: artifactory.config.import.yml
               name: {{ include "artifactory-common.fullname" . }}-config
             {{- with .Values.volumeMounts }}
