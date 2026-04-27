@@ -27,7 +27,7 @@ data:
     copy_keys() {
       local system_name="$1"
 
-      local security_dir="${JF_PRODUCT_HOME}"/var/etc/security
+      local security_dir="/var/opt/jfrog/artifactory/etc/security"
 
       mkdir -p "${security_dir}"
 
@@ -43,7 +43,7 @@ data:
     copy_system_yaml() {
       local system_name="$1"
 
-      local etc_dir="${JF_PRODUCT_HOME}"/var/etc
+      local etc_dir="/var/opt/jfrog/artifactory/etc"
 
       mkdir -p "${etc_dir}"
 
@@ -51,7 +51,7 @@ data:
     }
 
     copy_bootstrap_creds() {
-      local access_dir="${JF_PRODUCT_HOME}"/var/etc/access
+      local access_dir="/var/opt/jfrog/artifactory/etc/access"
 
       mkdir -p "${access_dir}"
 
@@ -65,7 +65,7 @@ data:
 
     copy_configs() {
       local source_config="/run/configs/artifactory/artifactory.config.import.yml"
-      local dest_config_dir="${JF_PRODUCT_HOME}/var/etc/artifactory"
+      local dest_config_dir="/var/opt/jfrog/artifactory/etc/artifactory"
       local dest_config="${dest_config_dir}/artifactory.config.import.yml"
 
       # Ensure source exists before proceeding

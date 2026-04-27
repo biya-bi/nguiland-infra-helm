@@ -57,14 +57,14 @@ spec:
             - sh
             - -c
             - |
-              chown -R 1030:1030 /opt/jfrog/artifactory/var
-              chmod -R u+rwX /opt/jfrog/artifactory/var
+              chown -R 1030:1030 /var/opt/jfrog/artifactory
+              chmod -R u+rwX /var/opt/jfrog/artifactory
           securityContext:
             runAsUser: 0
             runAsGroup: 0
           volumeMounts:
             - name: {{ include "artifactory-common.fullname" . }}-data
-              mountPath: /opt/jfrog/artifactory/var
+              mountPath: /var/opt/jfrog/artifactory
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
@@ -104,7 +104,7 @@ spec:
             - mountPath: /run/scripts/artifactory/run.sh
               name: {{ include "artifactory-common.fullname" . }}-entrypoint
               subPath: run.sh
-            - mountPath: /opt/jfrog/artifactory/var
+            - mountPath: /var/opt/jfrog/artifactory
               name: {{ include "artifactory-common.fullname" . }}-data
             - mountPath: /run/secrets/artifactory/{{ .Values.systemName }}
               name: {{ include "artifactory-common.fullname" . }}-secret
