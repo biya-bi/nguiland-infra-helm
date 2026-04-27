@@ -69,7 +69,7 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           command:
-            {{- toYaml (.Values.commands | default (list "/opt/jfrog/artifactory/scripts/run.sh")) | nindent 12 }}
+            {{- toYaml (.Values.commands | default (list "/run/scripts/artifactory/run.sh")) | nindent 12 }}
           securityContext:
             {{- $contSec := .Values.securityContext | default dict -}}
             {{- $contSec = merge (dict "runAsNonRoot" true "allowPrivilegeEscalation" false) $contSec -}}
@@ -101,7 +101,7 @@ spec:
             {{- $res = merge $resDefault $res -}}
             {{- toYaml $res | nindent 12 }}
           volumeMounts:
-            - mountPath: /opt/jfrog/artifactory/scripts/run.sh
+            - mountPath: /run/scripts/artifactory/run.sh
               name: {{ include "artifactory-common.fullname" . }}-entrypoint
               subPath: run.sh
             - mountPath: /opt/jfrog/artifactory/var
