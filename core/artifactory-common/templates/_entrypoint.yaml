@@ -31,13 +31,13 @@ data:
 
       mkdir -p "${security_dir}"
 
-      local join_key="${security_dir}"/join.key
-      cp /run/secrets/artifactory/"${system_name}"/join.key "${join_key}"
-      $(set_file_ownership "${join_key}")
+      local join_key="${security_dir}/join.key"
+      cp "/run/secrets/artifactory/${system_name}/join.key" "${join_key}"
+      set_file_ownership "${join_key}"
 
-      local master_key="${security_dir}"/master.key
-      cp /run/secrets/artifactory/"${system_name}"/master.key "${master_key}"
-      $(set_file_ownership "${master_key}")
+      local master_key="${security_dir}/master.key"
+      cp "/run/secrets/artifactory/${system_name}/master.key" "${master_key}"
+      set_file_ownership "${master_key}"
     }
 
     copy_system_yaml() {
@@ -47,7 +47,8 @@ data:
 
       mkdir -p "${etc_dir}"
 
-      cp /run/secrets/artifactory/"${system_name}"/system.yaml "${etc_dir}"/system.yaml
+      cp "/run/secrets/artifactory/${system_name}/system.yaml" "${etc_dir}/system.yaml"
+      set_file_ownership "${etc_dir}/system.yaml"
     }
 
     copy_bootstrap_creds() {
@@ -55,12 +56,10 @@ data:
 
       mkdir -p "${access_dir}"
 
-      local bootstrap_creds="${access_dir}"/bootstrap.creds
+      local bootstrap_creds="${access_dir}/bootstrap.creds"
 
       cp /run/secrets/artifactory/access/bootstrap.creds "${bootstrap_creds}"
-
-      chmod 600 "${bootstrap_creds}"
-      chown "${JF_ARTIFACTORY_USER}":"${JF_ARTIFACTORY_USER}" "${bootstrap_creds}"
+      set_file_ownership "${bootstrap_creds}"
     }
 
     copy_configs() {
