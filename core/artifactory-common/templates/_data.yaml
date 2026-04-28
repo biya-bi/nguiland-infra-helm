@@ -1,4 +1,5 @@
 {{- define "artifactory-common.data" -}}
+{{- $persistence := .Values.persistence | default dict -}}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -8,7 +9,10 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  {{- if $persistence.storageClass }}
+  storageClassName: {{ $persistence.storageClass | quote }}
+  {{- end }}
   resources:
     requests:
-      storage: 1Gi
+      storage: {{ $persistence.size | default "10Gi" | quote }}
 {{- end -}}
