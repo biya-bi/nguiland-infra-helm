@@ -168,7 +168,7 @@ script: |
       )
     | "\(.path)|\(.name)|\(.created_epoch)"
   ' result.json \
-  | gawk -F'|' -v protected_file="protected_builds.txt" '
+  | gawk -F'|' -v protected_file="protected_builds.txt" -v cutoff_epoch="$CUTOFF_EPOCH" '
   function load_protected() {
     while ((getline line < protected_file) > 0) {
       split(line, parts, "|")
@@ -259,7 +259,7 @@ script: |
           if (i <= KEEP) { skipped_keep++; continue }
 
           # SAFETY: respect age threshold
-          if (build_time[key] > '"$CUTOFF_EPOCH"') { skipped_new++; continue }
+          if (build_time[key] > cutoff_epoch) { skipped_new++; continue }
 
           deleted++
           print files[key]
@@ -276,7 +276,7 @@ script: |
           if (is_protected(key)) { skipped_protected++; continue } # NEVER delete metadata build
 
           # SAFETY: delete ONLY if older than threshold
-          if (build_time[key] <= '"$CUTOFF_EPOCH"') {
+          if (build_time[key] <= cutoff_epoch) {
             deleted++
             print files[key]
           } else {
