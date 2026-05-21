@@ -1,0 +1,31 @@
+{{- if eq (toString .Values.envMap.DRY_RUN) "true" }}
+*******************************************************************************
+*  WARNING: DRY_RUN is currently ENABLED.                                     *
+*  The cleanup script will identify PipelineRuns but will NOT delete them.    *
+*  Check logs to verify the selection logic before disabling DRY_RUN.         *
+*******************************************************************************
+{{- else }}
+*******************************************************************************
+*  CAUTION: DRY_RUN is currently DISABLED.                                    *
+*  The cleanup script WILL PERMANENTLY DELETE PipelineRuns.                   *
+*******************************************************************************
+{{- end }}
+
+=== Tekton PipelineRun Cleanup: {{ .Release.Name }} ===
+
+1. Check the CronJob status:
+   kubectl get cronjob {{ include "tekton-pipelinerun-cleanup.fullname" . }} -n {{ .Release.Namespace }}
+
+2. View the current configuration:
+   Target Namespace:  {{ .Values.envMap.NAMESPACE }}
+   Min Age (Minutes): {{ .Values.envMap.MIN_AGE_MINUTES }}
+   Max Deletions:     {{ .Values.envMap.MAX_DELETIONS }}
+   Dry Run Mode:      {{ .Values.envMap.DRY_RUN }}
+
+3. Trigger a manual cleanup run now:
+   kubectl create job --from=cronjob/{{ include "tekton-pipelinerun-cleanup.fullname" . }} {{ include "tekton-pipelinerun-cleanup.fullname" . }}-manual-$(date +%s) -n {{ .Release.Namespace }}
+
+4. View logs of the latest run:
+   kubectl logs -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }} --tail=50
+
+NOTE: If DRY_RUN is "true", no PipelineRuns will be deleted. Check logs to see what *would* have happened.
