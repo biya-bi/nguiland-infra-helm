@@ -10,8 +10,8 @@ spec:
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 1800
   suspend: false
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit | default 1 }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit | default 3 }}
   jobTemplate:
     spec:
       ttlSecondsAfterFinished: 3300
