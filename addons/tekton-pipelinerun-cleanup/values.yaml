@@ -20,6 +20,8 @@ envMap:
   PARALLELISM: 5
   MAX_DELETIONS: 50
 
+serviceAccountName: tekton-pipeline
+
 script: |
   set -uo pipefail
 

@@ -21,6 +21,7 @@ spec:
           restartPolicy: OnFailure
           activeDeadlineSeconds: 3600
           terminationGracePeriodSeconds: 30
+          serviceAccountName: {{ .Values.serviceAccountName }}
           containers:
             - name: cleanup
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
