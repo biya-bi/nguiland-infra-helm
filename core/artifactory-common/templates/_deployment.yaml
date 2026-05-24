@@ -38,7 +38,7 @@ spec:
       serviceAccountName: {{ include "artifactory-common.serviceAccountName" . }}
       securityContext:
         {{- $podSec := .Values.podSecurityContext | default dict -}}
-        {{- $podSec = merge (dict "fsGroup" 1030 "runAsUser" 1030 "runAsGroup" 1030 "fsGroupChangePolicy" "OnRootMismatch") $podSec -}}
+        {{- $podSec = mergeOverwrite (dict "fsGroup" 1030 "runAsUser" 1030 "runAsGroup" 1030 "fsGroupChangePolicy" "OnRootMismatch") $podSec -}}
         {{- toYaml $podSec | nindent 8 }}
       {{- $dataChownEnabled := true -}}
       {{- if hasKey .Values "dataChown" -}}
@@ -72,7 +72,7 @@ spec:
             {{- toYaml (.Values.commands | default (list "/run/scripts/artifactory/run.sh")) | nindent 12 }}
           securityContext:
             {{- $contSec := .Values.securityContext | default dict -}}
-            {{- $contSec = merge (dict "runAsNonRoot" true "allowPrivilegeEscalation" false) $contSec -}}
+            {{- $contSec = mergeOverwrite (dict "runAsNonRoot" true "allowPrivilegeEscalation" false) $contSec -}}
             {{- toYaml $contSec | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
@@ -83,22 +83,22 @@ spec:
           startupProbe:
             {{- $sp := .Values.startupProbe | default dict -}}
             {{- $spDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "failureThreshold" 60 "periodSeconds" 10 -}}
-            {{- $sp = merge $spDefault $sp -}}
+            {{- $sp = mergeOverwrite $spDefault $sp -}}
             {{- toYaml $sp | nindent 12 }}
           livenessProbe:
             {{- $lp := .Values.livenessProbe | default dict -}}
             {{- $lpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 10 "periodSeconds" 10 -}}
-            {{- $lp = merge $lpDefault $lp -}}
+            {{- $lp = mergeOverwrite $lpDefault $lp -}}
             {{- toYaml $lp | nindent 12 }}
           readinessProbe:
             {{- $rp := .Values.readinessProbe | default dict -}}
             {{- $rpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 10 "periodSeconds" 10 -}}
-            {{- $rp = merge $rpDefault $rp -}}
+            {{- $rp = mergeOverwrite $rpDefault $rp -}}
             {{- toYaml $rp | nindent 12 }}
           resources:
             {{- $res := .Values.resources | default dict -}}
             {{- $resDefault := dict "requests" (dict "cpu" "500m" "memory" "2Gi") "limits" (dict "cpu" "1000m" "memory" "4Gi") -}}
-            {{- $res = merge $resDefault $res -}}
+            {{- $res = mergeOverwrite $resDefault $res -}}
             {{- toYaml $res | nindent 12 }}
           volumeMounts:
             - mountPath: /run/scripts/artifactory/run.sh
@@ -120,7 +120,7 @@ spec:
           env:
             {{- $defaultEnv := dict "JF_PRODUCT_HOME" "/opt/jfrog/artifactory" "JF_ARTIFACTORY_USER" "artifactory" "JF_ROUTER_ENTRYPOINTS_EXTERNAL_ADDRESS_STRATEGY" "ipv4" "EXTRA_JAVA_OPTS" "-Djava.net.preferIPv4Stack=true" -}}
             {{- $envMap := .Values.envMap | default dict -}}
-            {{- $envMap = merge $defaultEnv $envMap -}}
+            {{- $envMap = mergeOverwrite $defaultEnv $envMap -}}
             {{- range $name, $value := $envMap }}
             - name: {{ $name }}
               value: {{ $value | quote }}
