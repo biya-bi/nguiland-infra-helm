@@ -21,7 +21,7 @@ spec:
           restartPolicy: OnFailure
           activeDeadlineSeconds: 3600
           terminationGracePeriodSeconds: 30
-          serviceAccountName: {{ include "artifactory-data-cleanup.fullname" . }}
+          serviceAccountName: {{ include "artifactory-data-cleanup.serviceAccountName" . }}
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}

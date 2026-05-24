@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "artifactory-data-cleanup.fullname" . }}
+  name: {{ include "artifactory-data-cleanup.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role

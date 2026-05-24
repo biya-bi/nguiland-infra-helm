@@ -49,3 +49,15 @@ Selector labels
 app.kubernetes.io/name: {{ include "artifactory-data-cleanup.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "artifactory-data-cleanup.serviceAccountName" -}}
+{{- $sa := .Values.serviceAccount | default dict -}}
+{{- if $sa.create }}
+{{- default (include "artifactory-data-cleanup.fullname" .) $sa.name }}
+{{- else }}
+{{- default "default" $sa.name }}
+{{- end }}
+{{- end }}
