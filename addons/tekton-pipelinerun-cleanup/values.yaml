@@ -3,6 +3,12 @@ image:
   pullPolicy: "IfNotPresent"
   tag: "f6dd048d1c14d89ede9636cd6bee0ff0238579c33ea1e51b2fb1a1cfd62ea246"
 
+serviceAccount:
+  create: false
+  automount: true
+  annotations: {}
+  name: "tekton-pipeline"
+
 resources:
   limits:
     cpu: "500m"
@@ -19,8 +25,6 @@ envMap:
   DRY_RUN: "false"
   PARALLELISM: 5
   MAX_DELETIONS: 50
-
-serviceAccountName: tekton-pipeline
 
 script: |
   set -uo pipefail

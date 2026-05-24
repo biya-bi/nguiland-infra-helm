@@ -49,3 +49,15 @@ Selector labels
 app.kubernetes.io/name: {{ include "tekton-pipelinerun-cleanup.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "tekton-pipelinerun-cleanup.serviceAccountName" -}}
+{{- $sa := .Values.serviceAccount | default dict -}}
+{{- if $sa.create -}}
+{{- default (include "tekton-pipelinerun-cleanup.fullname" .) $sa.name -}}
+{{- else -}}
+{{- default "default" $sa.name -}}
+{{- end -}}
+{{- end -}}
