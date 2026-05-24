@@ -6,6 +6,12 @@ image:
 imagePullSecrets: 
   - name: docker-config
 
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
 resources:
   limits:
     cpu: "500m"
