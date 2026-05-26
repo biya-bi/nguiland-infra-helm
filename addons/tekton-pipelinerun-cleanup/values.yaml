@@ -50,63 +50,63 @@ script: |
 
   log "Starting cleanup (dry-run=$DRY_RUN, namespace=$NAMESPACE)"
 
-  NOW=$(date +%s)
-  RESULTS=$(kubectl get pipelineruns -n "$NAMESPACE" \
+  now=$(date +%s)
+  results=$(kubectl get pipelineruns -n "$NAMESPACE" \
     -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.creationTimestamp}{" "}{.status.conditions[0].status}{"\n"}{end}' 2>/dev/null || true)
 
-  if [ -z "$RESULTS" ]; then
+  if [ -z "$results" ]; then
       log "No PipelineRuns found"
       exit 0
   fi
 
-  COUNT=0; DELETED=0; SKIPPED=0; FAILED=0; SELECTED=0; TO_DELETE=""
+  count=0; deleted=0; skipped=0; failed=0; selected=0; to_delete=""
 
-  while IFS= read -r LINE; do
-      NAME=$(echo "$LINE" | awk '{print $1}')
-      CREATED=$(echo "$LINE" | awk '{print $2}')
-      STATUS=$(echo "$LINE" | awk '{print $3}')
+  while IFS= read -r line; do
+      name=$(echo "$line" | awk '{print $1}')
+      created=$(echo "$line" | awk '{print $2}')
+      status=$(echo "$line" | awk '{print $3}')
 
-      [ -z "$NAME" ] || [ -z "$CREATED" ] || [ -z "$STATUS" ] && continue
-      [[ "$STATUS" != "True" && "$STATUS" != "False" ]] && continue
+      [ -z "$name" ] || [ -z "$created" ] || [ -z "$status" ] && continue
+      [[ "$status" != "True" && "$status" != "False" ]] && continue
 
-      CREATED_TS=$(date -d "$CREATED" +%s 2>/dev/null) || continue
-      AGE_MINUTES=$(( (NOW - CREATED_TS) / 60 ))
-      COUNT=$((COUNT + 1))
+      created_ts=$(date -d "$created" +%s 2>/dev/null) || continue
+      age_minutes=$(( (now - created_ts) / 60 ))
+      count=$((count + 1))
 
-      if [ "$AGE_MINUTES" -lt "$MIN_AGE_MINUTES" ]; then
-          SKIPPED=$((SKIPPED + 1))
+      if [ "$age_minutes" -lt "$MIN_AGE_MINUTES" ]; then
+          skipped=$((skipped + 1))
           continue
       fi
 
-      if [ "$SELECTED" -ge "$MAX_DELETIONS" ]; then
+      if [ "$selected" -ge "$MAX_DELETIONS" ]; then
           log "Reached MAX_DELETIONS=$MAX_DELETIONS, stopping selection"
           break
       fi
 
       if [ "$DRY_RUN" = "true" ]; then
-          log "[DRY-RUN] Would delete: $NAME (${AGE_MINUTES}m old)"
+          log "[DRY-RUN] Would delete: $name (${age_minutes}m old)"
           continue
       fi
 
-      TO_DELETE="${TO_DELETE}${NAME}\n"
-      SELECTED=$((SELECTED + 1))
-  done <<< "$RESULTS"
+      to_delete="${to_delete}${name}\n"
+      selected=$((selected + 1))
+  done <<< "$results"
 
-  if [ "$DRY_RUN" = "false" ] && [ -n "$TO_DELETE" ]; then
+  if [ "$DRY_RUN" = "false" ] && [ -n "$to_delete" ]; then
       log "Deleting PipelineRuns with parallelism=$PARALLELISM"
-      echo -e "$TO_DELETE" | xargs -P "$PARALLELISM" -I {} sh -c '
+      echo -e "$to_delete" | xargs -P "$PARALLELISM" -I {} sh -c '
           if kubectl delete pipelinerun "{}" -n "'"$NAMESPACE"'" --ignore-not-found=true >/dev/null 2>&1; then
               echo "Deleted: {}"
           else
               echo "FAILED: {}"
           fi
-      ' | while read -r LINE; do
-          log "$LINE"
-          case "$LINE" in
-              Deleted:*) DELETED=$((DELETED + 1)) ;;
-              FAILED:*) FAILED=$((FAILED + 1)) ;;
+      ' | while read -r line; do
+          log "$line"
+          case "$line" in
+              Deleted:*) deleted=$((deleted + 1)) ;;
+              FAILED:*) failed=$((failed + 1)) ;;
           esac
       done
   fi
 
-  log "Summary: processed=$COUNT selected=$SELECTED deleted=$DELETED skipped=$SKIPPED failed=$FAILED"
+  log "Summary: processed=$count selected=$selected deleted=$deleted skipped=$skipped failed=$failed"
