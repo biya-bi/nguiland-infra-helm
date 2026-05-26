@@ -1,10 +1,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "artifactory-data-cleanup.fullname" . }}
+  name: {{ include "cronjob-common.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "artifactory-data-cleanup.labels" . | nindent 4 }}
+    {{- include "cronjob-common.labels" . | nindent 4 }}
 rules:
 - apiGroups:
     - ""

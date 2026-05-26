@@ -1,13 +1,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "artifactory-data-cleanup.fullname" . }}
+  name: {{ include "cronjob-common.fullname" . }}
   namespace: {{ .Release.Namespace }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "artifactory-data-cleanup.serviceAccountName" . }}
+  name: {{ include "cronjob-common.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role
-  name: {{ include "artifactory-data-cleanup.fullname" . }}
+  name: {{ include "cronjob-common.fullname" . }}
   apiGroup: rbac.authorization.k8s.io

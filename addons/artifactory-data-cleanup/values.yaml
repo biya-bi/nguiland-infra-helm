@@ -1,23 +1,23 @@
 image:
   repository: "artifactory-jcr.infra/docker-local/org.nguiland.infra/alpine-ops-toolkit"
-  tag: "latest"
+  tag: "1.0.0"
 
 imagePullSecrets:
   - name: docker-config
 
-resources:
-  limits:
-    cpu: "500m"
-    memory: "256Mi"
-  requests:
-    cpu: "50m"
-    memory: "64Mi"
-
 schedule: "0 * * * *"
 
-systemNames:
-  - jcr
-  - oss
+command:
+  - /bin/bash
+  - -c
+
+podSecurityContext:
+  fsGroup: 1030
+  runAsUser: 1030
+  runAsGroup: 1030
+
+envMap:
+  SYSTEM_NAMES: "jcr oss"
 
 script: |
   set -euo pipefail
