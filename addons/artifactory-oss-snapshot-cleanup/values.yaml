@@ -39,6 +39,9 @@ envSecrets:
 script: |
   set -euo pipefail
 
+  # Ensure we are in a writable directory
+  cd /tmp
+
   echo "=== Artifactory Snapshot Cleanup ==="
   echo "Dry run: $DRY_RUN"
 
