@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CronJob Common Library Values Schema",
+  "type": "object",
+  "properties": {
+    "schedule": {
+      "type": "string",
+      "description": "Cron schedule for the cleanup job.",
+      "default": "0 * * * *"
+    },
+    "concurrencyPolicy": {
+      "type": "string",
+      "default": "Forbid",
+      "enum": ["Allow", "Forbid", "Replace"]
+    },
+    "startingDeadlineSeconds": {
+      "type": "integer",
+      "default": 1800
+    },
+    "suspend": {
+      "type": "boolean",
+      "default": false
+    },
+    "image": {
+      "type": "object",
+      "description": "Image configuration for the cleanup container.",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "description": "Container image repository.",
+          "default": "alpine"
+        },
+        "pullPolicy": {
+          "type": "string",
+          "default": "IfNotPresent",
+          "enum": ["Always", "Never", "IfNotPresent"],
+          "description": "Image pull policy."
+        },
+        "tag": {
+          "type": "string",
+          "default": "3.23",
+          "description": "Overrides the image tag."
+        }
+      },
+      "required": [
+        "repository"
+      ]
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "default": [],
+      "description": "Secrets used to pull images from private registries."
+    },
+    "nameOverride": {
+      "type": "string",
+      "default": "",
+      "description": "Override the chart name used in resource names."
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "default": "",
+      "description": "Override the full resource name."
+    },
+    "serviceAccount": {
+      "type": "object",
+      "description": "ServiceAccount configuration.",
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to create a dedicated ServiceAccount."
+        },
+        "automount": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to automount the ServiceAccount token."
+        },
+        "annotations": {
+          "type": "object",
+          "default": {},
+          "description": "Annotations for the ServiceAccount."
+        },
+        "name": {
+          "type": "string",
+          "default": "",
+          "description": "Override the ServiceAccount name."
+        }
+      }
+    },
+    "podSecurityContext": {
+      "type": "object",
+      "default": {},
+      "description": "Pod-level security context."
+    },
+    "securityContext": {
+      "type": "object",
+      "default": {},
+      "description": "Container-level security context."
+    },
+    "script": {
+      "type": "string",
+      "description": "The shell script executed by the CronJob."
+    },
+    "command": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": ["/bin/sh", "-c"],
+      "description": "The command to run in the container."
+    },
+    "envMap": {
+      "type": "object",
+      "default": {},
+      "description": "Map of environment variables (key-value pairs)."
+    },
+    "envSecrets": {
+      "type": "array",
+      "default": [],
+      "description": "List of Secret references for environment variables."
+    },
+    "resources": {
+      "type": "object",
+      "default": {},
+      "description": "Kubernetes resource requests and limits."
+    },
+    "successfulJobsHistoryLimit": {
+      "type": "integer",
+      "default": 1
+    },
+    "failedJobsHistoryLimit": {
+      "type": "integer",
+      "default": 3
+    },
+    "ttlSecondsAfterFinished": {
+      "type": "integer",
+      "default": 3300
+    },
+    "backoffLimit": {
+      "type": "integer",
+      "default": 2
+    },
+    "restartPolicy": {
+      "type": "string",
+      "default": "OnFailure",
+      "enum": ["OnFailure", "Always", "Never"]
+    },
+    "activeDeadlineSeconds": {
+      "type": "integer",
+      "default": 3600
+    },
+    "terminationGracePeriodSeconds": {
+      "type": "integer",
+      "default": 30
+    }
+  },
+  "required": [
+    "image",
+    "script"
+  ]
+}

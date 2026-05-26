@@ -1,0 +1,62 @@
+{{- define "cronjob-common.cronjob" -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "cronjob-common.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cronjob-common.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule | default "0 * * * *" | quote }}
+  concurrencyPolicy: {{ .Values.concurrencyPolicy | default "Forbid" }}
+  startingDeadlineSeconds: {{ .Values.startingDeadlineSeconds | default 1800 }}
+  suspend: {{ .Values.suspend | default false }}
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit | default 1 }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit | default 3 }}
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished | default 3300 }}
+      backoffLimit: {{ .Values.backoffLimit | default 2 }}
+      template:
+        spec:
+          restartPolicy: {{ .Values.restartPolicy | default "OnFailure" }}
+          activeDeadlineSeconds: {{ .Values.activeDeadlineSeconds | default 3600 }}
+          terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default 30 }}
+          serviceAccountName: {{ include "cronjob-common.serviceAccountName" . }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- $podSec := .Values.podSecurityContext | default dict -}}
+            {{- $podSec = mergeOverwrite (dict "fsGroup" 1001 "runAsUser" 1001 "runAsGroup" 1001 "fsGroupChangePolicy" "OnRootMismatch") $podSec -}}
+            {{- toYaml $podSec | nindent 12 }}
+          containers:
+            - name: {{ .Chart.Name }}
+              securityContext:
+                {{- $contSec := .Values.securityContext | default dict -}}
+                {{- $contSec = mergeOverwrite (dict "runAsNonRoot" true "allowPrivilegeEscalation" false) $contSec -}}
+                {{- toYaml $contSec | nindent 16 }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+              resources:
+                {{- $res := .Values.resources | default dict -}}
+                {{- $resDefault := dict "requests" (dict "cpu" "100m" "memory" "128Mi") "limits" (dict "cpu" "100m" "memory" "128Mi") -}}
+                {{- $res = mergeOverwrite $resDefault $res -}}
+                {{- toYaml $res | nindent 16 }}
+              env:
+                {{- range $name, $value := .Values.envMap }}
+                - name: {{ $name }}
+                  value: {{ $value | quote }}
+                {{- end }}
+                {{- with .Values.env }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+                {{- with .Values.envSecrets }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              command:
+                {{- toYaml (.Values.command | default (list "/bin/sh" "-c")) | nindent 16 }}
+              args:
+                - {{ .Values.script | quote }}
+{{- end -}}
