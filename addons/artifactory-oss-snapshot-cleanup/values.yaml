@@ -45,13 +45,13 @@ script: |
   echo "=== Artifactory Snapshot Cleanup ==="
   echo "Dry run: $DRY_RUN"
 
-  NOW_EPOCH=$(date +%s)
-  CUTOFF_EPOCH=$((NOW_EPOCH - MAX_AGE_HOURS * 3600))
+  now_epoch=$(date +%s)
+  cutoff_epoch=$((now_epoch - MAX_AGE_HOURS * 3600))
 
   # -----------------------------
   # Query Artifactory
   # -----------------------------
-  QUERY=$(cat <<EOF
+  query=$(cat <<EOF
   items.find({
     "repo": "$REPO",
     "path": {"\$match": "*SNAPSHOT*"}
@@ -65,7 +65,7 @@ script: |
     -u "$ART_OSS_USER:$ART_OSS_PASSWORD" \
     -X POST "$ART_OSS_URL/api/search/aql" \
     -H "Content-Type: text/plain" \
-    -d "$QUERY" > result.json || {
+    -d "$query" > result.json || {
       echo "ERROR: curl failed"
       exit 1
     }
@@ -102,10 +102,10 @@ script: |
     end
   ' result.json > tmp.json && mv tmp.json result.json
 
-  TOTAL=$(jq '.results | length' result.json)
-  echo "Total artifacts returned: $TOTAL"
+  total=$(jq '.results | length' result.json)
+  echo "Total artifacts returned: $total"
 
-  if [ "$TOTAL" -eq 0 ]; then
+  if [ "$total" -eq 0 ]; then
     echo "No artifacts found. Exiting."
     exit 0
   fi
@@ -119,10 +119,10 @@ script: |
     | .path
   ' result.json | sort -u > offenders.txt
 
-  OFFENDER_COUNT=$(grep -c . offenders.txt || true)
-  echo "Artifacts requiring cleanup: $OFFENDER_COUNT"
+  offender_count=$(grep -c . offenders.txt || true)
+  echo "Artifacts requiring cleanup: $offender_count"
 
-  if [ "$OFFENDER_COUNT" -eq 0 ]; then
+  if [ "$offender_count" -eq 0 ]; then
     echo "No cleanup required."
     exit 0
   fi
@@ -139,15 +139,15 @@ script: |
   > protected_builds.txt
 
   while read -r path; do
-    META_URL="$ART_OSS_URL/$REPO/$path/maven-metadata.xml"
+    meta_url="$ART_OSS_URL/$REPO/$path/maven-metadata.xml"
 
     if curl -sf --connect-timeout 5 --max-time 10 \
-      -u "$ART_OSS_USER:$ART_OSS_PASSWORD" "$META_URL" -o meta.xml; then
+      -u "$ART_OSS_USER:$ART_OSS_PASSWORD" "$meta_url" -o meta.xml; then
 
-      BUILD=$(grep -oE '[0-9]{8}\.[0-9]{6}-[0-9]+' meta.xml | head -n 1 || true)
+      build=$(grep -oE '[0-9]{8}\.[0-9]{6}-[0-9]+' meta.xml | head -n 1 || true)
 
-      if [ -n "$BUILD" ]; then
-        echo "$path|$BUILD" >> protected_builds.txt
+      if [ -n "$build" ]; then
+        echo "$path|$build" >> protected_builds.txt
       fi
     fi
   done < offenders.txt
@@ -169,7 +169,7 @@ script: |
       )
     | "\(.path)|\(.name)|\(.created_epoch)"
   ' result.json \
-  | gawk -F'|' -v protected_file="protected_builds.txt" -v cutoff_epoch="$CUTOFF_EPOCH" '
+  | gawk -F'|' -v protected_file="protected_builds.txt" -v cutoff_epoch="$cutoff_epoch" -v keep="$KEEP" '
   function load_protected() {
     while ((getline line < protected_file) > 0) {
       split(line, parts, "|")
@@ -242,62 +242,62 @@ script: |
       }
 
       # --- DEBUG counters ---
-      total = build_count[p]
-      skipped_latest = 0
-      skipped_protected = 0
-      skipped_keep = 0
-      skipped_new = 0
-      deleted = 0
+      total_builds = build_count[p]
+      skipped_latest_build = 0
+      skipped_protected_build = 0
+      skipped_by_keep = 0
+      skipped_new_build = 0
+      deleted_build = 0
 
-      # Standard case: more builds than KEEP
-      if (build_count[p] > KEEP) {
+      # Standard case: more builds than keep
+      if (build_count[p] > keep) {
         for (i=1; i<=build_count[p]; i++) {
           build=build_order[p,i]
           key=p "|" build
 
-          if (i == 1) { skipped_latest++; continue } # NEVER delete latest build
-          if (is_protected(key)) { skipped_protected++; continue } # NEVER delete metadata build
-          if (i <= KEEP) { skipped_keep++; continue }
+          if (i == 1) { skipped_latest_build++; continue } # NEVER delete latest build
+          if (is_protected(key)) { skipped_protected_build++; continue } # NEVER delete metadata build
+          if (i <= keep) { skipped_by_keep++; continue }
 
           # SAFETY: respect age threshold
-          if (build_time[key] > cutoff_epoch) { skipped_new++; continue }
+          if (build_time[key] > cutoff_epoch) { skipped_new_build++; continue }
 
-          deleted++
+          deleted_build++
           print files[key]
         }
       }
 
-      # Handle case where total builds <= KEEP
+      # Handle case where total builds <= keep
       else {
         for (i=1; i<=build_count[p]; i++) {
           build=build_order[p,i]
           key=p "|" build
 
-          if (i == 1) { skipped_latest++; continue } # NEVER delete latest build
-          if (is_protected(key)) { skipped_protected++; continue } # NEVER delete metadata build
+          if (i == 1) { skipped_latest_build++; continue } # NEVER delete latest build
+          if (is_protected(key)) { skipped_protected_build++; continue } # NEVER delete metadata build
 
           # SAFETY: delete ONLY if older than threshold
           if (build_time[key] <= cutoff_epoch) {
-            deleted++
+            deleted_build++
             print files[key]
           } else {
-            skipped_new++
+            skipped_new_build++
           }
         }
       }
 
       # --- DEBUG output per artifact ---
       printf("DEBUG [%s] total=%d kept_latest=%d kept_protected=%d kept_by_keep=%d kept_new=%d deleted=%d\n",
-        p, total, skipped_latest, skipped_protected, skipped_keep, skipped_new, deleted) > "/dev/stderr"
+        p, total_builds, skipped_latest_build, skipped_protected_build, skipped_by_keep, skipped_new_build, deleted_build) > "/dev/stderr"
     }
   }' \
   | grep -v '^$' || true \
   | sort -u > delete.txt   # SAFETY: deduplicate
 
-  DELETE_COUNT=$(grep -c . delete.txt || true)
-  echo "Files to delete: $DELETE_COUNT"
+  delete_count=$(grep -c . delete.txt || true)
+  echo "Files to delete: $delete_count"
 
-  if [ "$DELETE_COUNT" -eq 0 ]; then
+  if [ "$delete_count" -eq 0 ]; then
     echo "Nothing to delete."
     exit 0
   fi
@@ -318,25 +318,25 @@ script: |
 
   cat delete.txt | grep -v '^$' | \
     xargs -I {} -P $MAX_PARALLEL sh -c '
-      FILE="$1"
+      file="$1"
 
       # SAFETY: avoid dangerous deletes
-      if echo "$FILE" | grep -q "\.\."; then
-        echo "Skipping suspicious path: $FILE"
+      if echo "$file" | grep -q "\.\."; then
+        echo "Skipping suspicious path: $file"
         exit 0
       fi
 
       for i in $(seq 1 '"$RETRIES"'); do
-        echo "Deleting $FILE (attempt $i)"
+        echo "Deleting $file (attempt $i)"
         if curl -sf --connect-timeout 10 --max-time 60 \
           -u "'"$ART_OSS_USER:$ART_OSS_PASSWORD"'" \
-          -X DELETE "'"$ART_OSS_URL/$REPO"'/$FILE"; then
-          echo "Deleted $FILE"
+          -X DELETE "'"$ART_OSS_URL/$REPO"'/$file"; then
+          echo "Deleted $file"
           exit 0
         fi
         sleep $((i * 2))
       done
-      echo "FAILED to delete $FILE" >&2
+      echo "FAILED to delete $file" >&2
       exit 1
     ' _ {}
 
