@@ -2,4 +2,9 @@ apiVersion: v2
 name: tekton-pipelinerun-cleanup
 description: A Helm chart for Tekton PipelineRun cleanup
 version: 0.1.0
-appVersion: "1.28.3"
+appVersion: "0.1.0"
+
+dependencies:
+  - name: cronjob-common
+    version: 0.1.0
+    repository: "file://../cronjob-common"

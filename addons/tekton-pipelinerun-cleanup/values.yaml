@@ -1,33 +1,27 @@
 image:
   repository: "docker.io/bitnami/kubectl@sha256"
   pullPolicy: "IfNotPresent"
-  tag: "f6dd048d1c14d89ede9636cd6bee0ff0238579c33ea1e51b2fb1a1cfd62ea246"
+  tag: "0ed36a7f6a94c1b82d70811ed03caf3df92b4b2b8f8817d0f726f0f3a26e64af"
+
+command:
+  - /bin/bash
+  - -c
 
 serviceAccount:
   create: false
-  automount: true
-  annotations: {}
   name: "tekton-pipeline"
-
-resources:
-  limits:
-    cpu: "500m"
-    memory: "256Mi"
-  requests:
-    cpu: "50m"
-    memory: "64Mi"
 
 schedule: "0 * * * *"
 
 envMap:
   NAMESPACE: "infra"
-  MIN_AGE_MINUTES: 60
+  MIN_AGE_MINUTES: "60"
   DRY_RUN: "false"
-  PARALLELISM: 5
-  MAX_DELETIONS: 50
+  PARALLELISM: "5"
+  MAX_DELETIONS: "50"
 
 script: |
-  set -uo pipefail
+  set -euo pipefail
 
   log() { 
     echo "[$(date)] $*";
