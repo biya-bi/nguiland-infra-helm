@@ -27,23 +27,23 @@ script: |
 
     local pod_name="$1"
 
-    local RED='\033[0;31m'
-    local YELLOW='\033[0;33m'
-    local NO_COLOR='\033[0m'
+    local red='\033[0;31m'
+    local yellow='\033[0;33m'
+    local no_color='\033[0m'
 
     printf "INFO: Running cleanup in pod %s\n" "$pod_name"
 
     local dir="/opt/jfrog/artifactory/var"
 
     if [ ! -d "$dir" ]; then
-      printf "%bERROR: Directory does not exist: $dir%b\n" "$RED" "$NO_COLOR"
+      printf "%bERROR: Directory does not exist: $dir%b\n" "$red" "$no_color"
       return 0
     fi
 
     local system_yaml="/opt/jfrog/artifactory/var/etc/system.yaml"
 
     if [ ! -f "$system_yaml" ]; then
-      printf "%bERROR: File does not exist: $system_yaml%b\n" "$RED" "$NO_COLOR"
+      printf "%bERROR: File does not exist: $system_yaml%b\n" "$red" "$no_color"
       return 0
     fi
 
@@ -62,24 +62,24 @@ script: |
           printf "INFO: No files to delete in %s\n" "$archived_dir"
         fi
       else
-        printf "%bWARN: Directory does not exist: $archived_dir%b\n" "$YELLOW" "$NO_COLOR"
+        printf "%bWARN: Directory does not exist: $archived_dir%b\n" "$yellow" "$no_color"
       fi
     else
-      printf "%bINFO: observability.consumption.allow is set to '$allow', skipping deletion%b\n" "$YELLOW" "$NO_COLOR"
+      printf "%bINFO: observability.consumption.allow is set to '$allow', skipping deletion%b\n" "$yellow" "$no_color"
     fi
   }
 
   printf "=== Artifactory Data Cleanup ===\n"
 
-  YELLOW='\033[0;33m'
-  NO_COLOR='\033[0m'
+  yellow='\033[0;33m'
+  no_color='\033[0m'
 
   for system_name in $SYSTEM_NAMES; do
     # Get pod name
     pod_name=$(kubectl get pod -l app.kubernetes.io/name=artifactory-${system_name} -o jsonpath='{.items[*].metadata.name}' | awk '{print $1}')
 
     if [ -z "$pod_name" ]; then
-      printf "%bWARN: No active pod found for ${system_name}.%b\n" "$YELLOW" "$NO_COLOR"
+      printf "%bWARN: No active pod found for ${system_name}.%b\n" "$yellow" "$no_color"
       continue
     fi
 
