@@ -7,45 +7,45 @@ metadata:
   labels:
     {{- include "cronjob-common.labels" . | nindent 4 }}
 spec:
-  schedule: {{ .Values.schedule | default "0 * * * *" | quote }}
-  concurrencyPolicy: {{ .Values.concurrencyPolicy | default "Forbid" }}
-  startingDeadlineSeconds: {{ .Values.startingDeadlineSeconds | default 1800 }}
-  suspend: {{ .Values.suspend | default false }}
-  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit | default 1 }}
-  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit | default 3 }}
+  schedule: {{ .Values.schedule | default (index .Values "cronjob-common" "schedule") | default "0 * * * *" | quote }}
+  concurrencyPolicy: {{ .Values.concurrencyPolicy | default (index .Values "cronjob-common" "concurrencyPolicy") | default "Forbid" }}
+  startingDeadlineSeconds: {{ .Values.startingDeadlineSeconds | default (index .Values "cronjob-common" "startingDeadlineSeconds") | default 1800 }}
+  suspend: {{ if kindIs "bool" .Values.suspend }}{{ .Values.suspend }}{{ else if kindIs "bool" (index .Values "cronjob-common" "suspend") }}{{ index .Values "cronjob-common" "suspend" }}{{ else }}false{{ end }}
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit | default (index .Values "cronjob-common" "successfulJobsHistoryLimit") | default 1 }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit | default (index .Values "cronjob-common" "failedJobsHistoryLimit") | default 3 }}
   jobTemplate:
     spec:
-      ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished | default 3300 }}
-      backoffLimit: {{ .Values.backoffLimit | default 2 }}
+      ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished | default (index .Values "cronjob-common" "ttlSecondsAfterFinished") | default 3300 }}
+      backoffLimit: {{ .Values.backoffLimit | default (index .Values "cronjob-common" "backoffLimit") | default 2 }}
       template:
         spec:
-          restartPolicy: {{ .Values.restartPolicy | default "OnFailure" }}
-          activeDeadlineSeconds: {{ .Values.activeDeadlineSeconds | default 3600 }}
-          terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default 30 }}
+          restartPolicy: {{ .Values.restartPolicy | default (index .Values "cronjob-common" "restartPolicy") | default "OnFailure" }}
+          activeDeadlineSeconds: {{ .Values.activeDeadlineSeconds | default (index .Values "cronjob-common" "activeDeadlineSeconds") | default 3600 }}
+          terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default (index .Values "cronjob-common" "terminationGracePeriodSeconds") | default 30 }}
           serviceAccountName: {{ include "cronjob-common.serviceAccountName" . }}
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           securityContext:
-            {{- $podSec := .Values.podSecurityContext | default dict -}}
+            {{- $podSec := .Values.podSecurityContext | default (index .Values "cronjob-common" "podSecurityContext") | default dict -}}
             {{- $podSec = mergeOverwrite (dict "fsGroup" 1001 "runAsUser" 1001 "runAsGroup" 1001 "fsGroupChangePolicy" "OnRootMismatch") $podSec -}}
             {{- toYaml $podSec | nindent 12 }}
           containers:
             - name: {{ .Chart.Name }}
               securityContext:
-                {{- $contSec := .Values.securityContext | default dict -}}
+                {{- $contSec := .Values.securityContext | default (index .Values "cronjob-common" "securityContext") | default dict -}}
                 {{- $contSec = mergeOverwrite (dict "runAsNonRoot" true "allowPrivilegeEscalation" false) $contSec -}}
                 {{- toYaml $contSec | nindent 16 }}
-              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}"
-              imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+              image: "{{ .Values.image.repository | default (index .Values "cronjob-common" "image" "repository") }}:{{ .Values.image.tag | default (index .Values "cronjob-common" "image" "tag") | default "latest" }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy | default (index .Values "cronjob-common" "image" "pullPolicy") | default "IfNotPresent" }}
               resources:
-                {{- $res := .Values.resources | default dict -}}
+                {{- $res := .Values.resources | default (index .Values "cronjob-common" "resources") | default dict -}}
                 {{- $resDefault := dict "requests" (dict "cpu" "100m" "memory" "128Mi") "limits" (dict "cpu" "100m" "memory" "128Mi") -}}
                 {{- $res = mergeOverwrite $resDefault $res -}}
                 {{- toYaml $res | nindent 16 }}
               env:
-                {{- range $name, $value := .Values.envMap }}
+                {{- range $name, $value := .Values.envMap | default (index .Values "cronjob-common" "envMap") }}
                 - name: {{ $name }}
                   value: {{ $value | quote }}
                 {{- end }}
@@ -56,7 +56,7 @@ spec:
                 {{- toYaml . | nindent 16 }}
                 {{- end }}
               command:
-                {{- toYaml (.Values.command | default (list "/bin/sh" "-c")) | nindent 16 }}
+                {{- toYaml (.Values.command | default (index .Values "cronjob-common" "command") | default (list "/bin/sh" "-c")) | nindent 16 }}
               args:
-                - {{ .Values.script | quote }}
+                - {{ .Values.script | default (index .Values "cronjob-common" "script") | quote }}
 {{- end -}}
