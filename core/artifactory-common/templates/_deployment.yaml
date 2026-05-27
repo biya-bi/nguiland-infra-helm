@@ -6,53 +6,63 @@ metadata:
   labels:
     {{- include "artifactory-common.labels" . | nindent 4 }}
 spec:
-  {{- with .Values.strategy }}
+  {{- if .Values.strategy }}
   strategy:
-    {{- toYaml . | nindent 4 }}
+    {{- toYaml .Values.strategy | nindent 4 }}
+  {{- else if (index .Values "artifactory-common" "strategy") }}
+  strategy:
+    {{- toYaml (index .Values "artifactory-common" "strategy") | nindent 4 }}
   {{- else }}
   strategy:
     type: Recreate
   {{- end }}
-  {{- if not (and .Values.autoscaling .Values.autoscaling.enabled) }}
-  replicas: {{ .Values.replicaCount | default 1 }}
+  {{- if not (and (.Values.autoscaling | default (index .Values "artifactory-common" "autoscaling")) (.Values.autoscaling.enabled | default (index .Values "artifactory-common" "autoscaling" "enabled"))) }}
+  replicas: {{ .Values.replicaCount | default (index .Values "artifactory-common" "replicaCount") | default 1 }}
   {{- end }}
   selector:
     matchLabels:
       {{- include "artifactory-common.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations | default dict }}
+      {{- with .Values.podAnnotations | default (index .Values "artifactory-common" "podAnnotations") | default dict }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
         {{- include "artifactory-common.labels" . | nindent 8 }}
-        {{- with .Values.podLabels | default dict }}
+        {{- with .Values.podLabels | default (index .Values "artifactory-common" "podLabels") | default dict }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with .Values.imagePullSecrets | default (index .Values "artifactory-common" "imagePullSecrets") }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "artifactory-common.serviceAccountName" . }}
       securityContext:
-        {{- $podSec := .Values.podSecurityContext | default dict -}}
+        {{- $podSec := .Values.podSecurityContext | default (index .Values "artifactory-common" "podSecurityContext") | default dict -}}
         {{- $podSec = mergeOverwrite (dict "fsGroup" 1030 "runAsUser" 1030 "runAsGroup" 1030 "fsGroupChangePolicy" "OnRootMismatch") $podSec -}}
         {{- toYaml $podSec | nindent 8 }}
       {{- $dataChownEnabled := true -}}
+      {{- $dataChownRaw := .Values.dataChown | default (index .Values "artifactory-common" "dataChown") -}}
       {{- if hasKey .Values "dataChown" -}}
         {{- if kindIs "map" .Values.dataChown -}}
           {{- $dataChownEnabled = .Values.dataChown.enabled | default true -}}
         {{- else -}}
           {{- $dataChownEnabled = .Values.dataChown -}}
         {{- end -}}
+      {{- else if hasKey (index .Values "artifactory-common") "dataChown" -}}
+        {{- if kindIs "map" (index .Values "artifactory-common" "dataChown") -}}
+          {{- $dataChownEnabled = (index .Values "artifactory-common" "dataChown" "enabled") | default true -}}
+        {{- else -}}
+          {{- $dataChownEnabled = (index .Values "artifactory-common" "dataChown") -}}
+        {{- end -}}
       {{- end -}}
       {{- if $dataChownEnabled }}
       initContainers:
         - name: {{ include "artifactory-common.fullname" . }}-init-chown
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          image: "{{ .Values.image.repository | default (index .Values "artifactory-common" "image" "repository") }}:{{ .Values.image.tag | default (index .Values "artifactory-common" "image" "tag") | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default (index .Values "artifactory-common" "image" "pullPolicy") | default "IfNotPresent" }}
           command:
             - sh
             - -c
@@ -69,34 +79,34 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           command:
-            {{- toYaml (.Values.commands | default (list "/run/scripts/artifactory/run.sh")) | nindent 12 }}
+            {{- toYaml (.Values.commands | default (index .Values "artifactory-common" "commands") | default (list "/run/scripts/artifactory/run.sh")) | nindent 12 }}
           securityContext:
-            {{- $contSec := .Values.securityContext | default dict -}}
+            {{- $contSec := .Values.securityContext | default (index .Values "artifactory-common" "securityContext") | default dict -}}
             {{- $contSec = mergeOverwrite (dict "runAsNonRoot" true "allowPrivilegeEscalation" false) $contSec -}}
             {{- toYaml $contSec | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          image: "{{ .Values.image.repository | default (index .Values "artifactory-common" "image" "repository") }}:{{ .Values.image.tag | default (index .Values "artifactory-common" "image" "tag") | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default (index .Values "artifactory-common" "image" "pullPolicy") | default "IfNotPresent" }}
           ports:
-            - name: {{ .Values.service.name }}
-              containerPort: {{ .Values.service.port }}
-              protocol: {{ .Values.service.protocol | default "TCP" }}
+            - name: {{ .Values.service.name | default (index .Values "artifactory-common" "service" "name") }}
+              containerPort: {{ .Values.service.port | default (index .Values "artifactory-common" "service" "port") }}
+              protocol: {{ .Values.service.protocol | default (index .Values "artifactory-common" "service" "protocol") | default "TCP" }}
           startupProbe:
-            {{- $sp := .Values.startupProbe | default dict -}}
-            {{- $spDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "failureThreshold" 60 "periodSeconds" 10 -}}
+            {{- $sp := .Values.startupProbe | default (index .Values "artifactory-common" "startupProbe") | default dict -}}
+            {{- $spDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" (.Values.service.port | default (index .Values "artifactory-common" "service" "port"))) "failureThreshold" 60 "periodSeconds" 10 -}}
             {{- $sp = mergeOverwrite $spDefault $sp -}}
             {{- toYaml $sp | nindent 12 }}
           livenessProbe:
-            {{- $lp := .Values.livenessProbe | default dict -}}
-            {{- $lpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 10 "periodSeconds" 10 -}}
+            {{- $lp := .Values.livenessProbe | default (index .Values "artifactory-common" "livenessProbe") | default dict -}}
+            {{- $lpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" (.Values.service.port | default (index .Values "artifactory-common" "service" "port"))) "initialDelaySeconds" 10 "periodSeconds" 10 -}}
             {{- $lp = mergeOverwrite $lpDefault $lp -}}
             {{- toYaml $lp | nindent 12 }}
           readinessProbe:
-            {{- $rp := .Values.readinessProbe | default dict -}}
-            {{- $rpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" .Values.service.port) "initialDelaySeconds" 10 "periodSeconds" 10 -}}
+            {{- $rp := .Values.readinessProbe | default (index .Values "artifactory-common" "readinessProbe") | default dict -}}
+            {{- $rpDefault := dict "httpGet" (dict "path" "/artifactory/api/system/ping" "port" (.Values.service.port | default (index .Values "artifactory-common" "service" "port"))) "initialDelaySeconds" 10 "periodSeconds" 10 -}}
             {{- $rp = mergeOverwrite $rpDefault $rp -}}
             {{- toYaml $rp | nindent 12 }}
           resources:
-            {{- $res := .Values.resources | default dict -}}
+            {{- $res := .Values.resources | default (index .Values "artifactory-common" "resources") | default dict -}}
             {{- $resDefault := dict "requests" (dict "cpu" "500m" "memory" "2Gi") "limits" (dict "cpu" "1000m" "memory" "4Gi") -}}
             {{- $res = mergeOverwrite $resDefault $res -}}
             {{- toYaml $res | nindent 12 }}
@@ -106,7 +116,7 @@ spec:
               subPath: run.sh
             - mountPath: /var/opt/jfrog/artifactory
               name: {{ include "artifactory-common.fullname" . }}-data
-            - mountPath: /run/secrets/artifactory/{{ .Values.systemName }}
+            - mountPath: /run/secrets/artifactory/{{ .Values.systemName | default (index .Values "artifactory-common" "systemName") }}
               name: {{ include "artifactory-common.fullname" . }}-secret
             - mountPath: /run/secrets/artifactory/access/bootstrap.creds
               subPath: bootstrap.creds
@@ -114,12 +124,12 @@ spec:
             - mountPath: /run/configs/artifactory/artifactory.config.import.yml
               subPath: artifactory.config.import.yml
               name: {{ include "artifactory-common.fullname" . }}-config
-            {{- with .Values.volumeMounts }}
+            {{- with .Values.volumeMounts | default (index .Values "artifactory-common" "volumeMounts") }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             {{- $defaultEnv := dict "JF_PRODUCT_HOME" "/opt/jfrog/artifactory" "JF_ARTIFACTORY_USER" "artifactory" "JF_ROUTER_ENTRYPOINTS_EXTERNAL_ADDRESS_STRATEGY" "ipv4" "EXTRA_JAVA_OPTS" "-Djava.net.preferIPv4Stack=true" -}}
-            {{- $envMap := .Values.envMap | default dict -}}
+            {{- $envMap := .Values.envMap | default (index .Values "artifactory-common" "envMap") | default dict -}}
             {{- $envMap = mergeOverwrite $defaultEnv $envMap -}}
             {{- range $name, $value := $envMap }}
             - name: {{ $name }}
@@ -127,6 +137,8 @@ spec:
             {{- end }}
             {{- if .Values.extraEnv }}
             {{- toYaml .Values.extraEnv | nindent 12 }}
+            {{- else if (index .Values "artifactory-common" "extraEnv") }}
+            {{- toYaml (index .Values "artifactory-common" "extraEnv") | nindent 12 }}
             {{- end }}
       volumes:
         - name: {{ include "artifactory-common.fullname" . }}-entrypoint
@@ -146,18 +158,18 @@ spec:
           configMap:
             name: {{ include "artifactory-common.fullname" . }}-config
             defaultMode: 0644
-        {{- with .Values.volumes }}
+        {{- with .Values.volumes | default (index .Values "artifactory-common" "volumes") }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- with .Values.nodeSelector }}
+      {{- with .Values.nodeSelector | default (index .Values "artifactory-common" "nodeSelector") }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.affinity | default (index .Values "artifactory-common" "affinity") }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.tolerations | default (index .Values "artifactory-common" "tolerations") }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
