@@ -1,0 +1,5 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Artifactory JCR Schema",
+  "$ref": "file://../artifactory-common/values.schema.json"
+}

@@ -10,7 +10,3 @@ HELP.md
 # Helm
 **/tmpcharts/
 *.tgz
-
-# Generated local schema copies
-core/artifactory-jcr/values.schema.json
-core/artifactory-oss/values.schema.json

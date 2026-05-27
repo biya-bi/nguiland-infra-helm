@@ -1,0 +1,5 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tekton PipelineRun Cleanup Schema",
+  "$ref": "file://../cronjob-common/values.schema.json"
+}
