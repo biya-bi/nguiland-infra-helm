@@ -172,6 +172,9 @@ chartPackager:
       echo "Linting chart configuration for artifactory-jcr..."
       helm lint /src/core/artifactory-jcr
 
+      # The schema is only needed for the linting step above.
+      rm "${schema_file}"
+
       echo "Packaging chart artifactory-jcr..."
       helm package /src/core/artifactory-jcr -d /usr/share/nginx/html/charts/
       echo "Helm repository index successfully generated!"
