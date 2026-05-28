@@ -35,7 +35,8 @@ spec:
           image: {{ .Values.repoExtractor.image }}
           command: {{ toJson .Values.repoExtractor.command }}
           args:
-            - {{ .Values.repoExtractor.script | quote }}
+            - |
+              {{ .Values.repoExtractor.script | nindent 14 }}
           {{- with .Values.repoExtractor.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
@@ -46,7 +47,8 @@ spec:
           image: {{ .Values.chartPackager.image }}
           command: {{ toJson .Values.chartPackager.command }}
           args:
-            - {{ .Values.chartPackager.script | quote }}
+            - |
+              {{ .Values.chartPackager.script | nindent 14 }}
           {{- with .Values.chartPackager.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
