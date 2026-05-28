@@ -73,16 +73,14 @@ readinessProbe:
   successThreshold: 1
   failureThreshold: 3
 
-volumes:
-  - name: charts-dir
-    emptyDir: {}
-  - name: git-source-dir
-    emptyDir: {}
+persistence:
+  storageClass: ""
+  size: 100Mi
+  accessModes:
+    - ReadWriteOnce
 
-volumeMounts:
-  - name: charts-dir
-    mountPath: /usr/share/nginx/html/charts
-    readOnly: true
+volumes: []
+volumeMounts: []
 
 nodeSelector: {}
 
@@ -147,9 +145,6 @@ repoExtractor:
 
     # Extract the source code from Flux
     extract_flux_artifact
-  volumeMounts:
-  - name: git-source-dir
-    mountPath: /src
 
 chartPackager:
   image: alpine/helm:3.20.2
@@ -180,7 +175,7 @@ chartPackager:
       echo "Helm repository index successfully generated!"
     }
 
-    # Ensure the target directory path exists on the emptyDir volume
+    # Ensure the target directory path exists on the volume
     mkdir -p /usr/share/nginx/html/charts
 
     echo "Starting chart packaging process..."
@@ -190,8 +185,3 @@ chartPackager:
 
     echo "Generating Helm repository index..."
     helm repo index /usr/share/nginx/html/charts/
-  volumeMounts:
-    - name: git-source-dir
-      mountPath: /src
-    - name: charts-dir
-      mountPath: /usr/share/nginx/html/charts

@@ -1,0 +1,16 @@
+{{- $persistence := .Values.persistence | default dict -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "chart-repository.fullname" . }}-charts
+  labels:
+    {{- include "chart-repository.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml ($persistence.accessModes | default (list "ReadWriteOnce")) | nindent 4 }}
+  {{- if $persistence.storageClass }}
+  storageClassName: {{ $persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $persistence.size | default "100Mi" | quote }}

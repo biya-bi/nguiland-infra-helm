@@ -37,8 +37,10 @@ spec:
           args:
             - |
               {{ .Values.repoExtractor.script | nindent 14 }}
-          {{- with .Values.repoExtractor.volumeMounts }}
           volumeMounts:
+            - name: git-source-dir
+              mountPath: /src
+          {{- with .Values.repoExtractor.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
           env:
@@ -49,8 +51,12 @@ spec:
           args:
             - |
               {{ .Values.chartPackager.script | nindent 14 }}
-          {{- with .Values.chartPackager.volumeMounts }}
           volumeMounts:
+            - name: git-source-dir
+              mountPath: /src
+            - name: charts-dir
+              mountPath: /usr/share/nginx/html/charts
+          {{- with .Values.chartPackager.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
           env:
@@ -80,14 +86,22 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
             {{- include "chart-repository.env" .Values | nindent 12 }}
-          {{- with .Values.volumeMounts }}
           volumeMounts:
+            - name: charts-dir
+              mountPath: /usr/share/nginx/html/charts
+              readOnly: true
+          {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- with .Values.volumes }}
       volumes:
+        - name: charts-dir
+          persistentVolumeClaim:
+            claimName: {{ include "chart-repository.fullname" . }}-charts
+        - name: git-source-dir
+          emptyDir: {}
+        {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
