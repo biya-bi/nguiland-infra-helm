@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "chart-repository.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "chart-repository.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - "source.toolkit.fluxcd.io"
+    resources:
+      - gitrepositories
+    verbs:
+      - get
+      - list
