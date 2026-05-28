@@ -45,7 +45,7 @@ resources:
 
 startupProbe:
   httpGet:
-    path: /charts/
+    path: /charts/index.yaml
     port: http
   initialDelaySeconds: 2
   periodSeconds: 2
@@ -55,7 +55,7 @@ startupProbe:
 
 livenessProbe:
   httpGet:
-    path: /charts/
+    path: /charts/index.yaml
     port: http
   initialDelaySeconds: 0
   periodSeconds: 10
@@ -65,7 +65,7 @@ livenessProbe:
 
 readinessProbe:
   httpGet:
-    path: /charts/
+    path: /charts/index.yaml
     port: http
   initialDelaySeconds: 0
   periodSeconds: 10
@@ -174,6 +174,7 @@ chartPackager:
 
       echo "Packaging chart artifactory-jcr..."
       helm package /src/core/artifactory-jcr -d /usr/share/nginx/html/charts/
+      echo "Helm repository index successfully generated!"
     }
 
     # Ensure the target directory path exists on the emptyDir volume
@@ -183,6 +184,9 @@ chartPackager:
     package_artifactory_jcr
 
     echo "All chart packaging successfully completed!"
+
+    echo "Generating Helm repository index..."
+    helm repo index /usr/share/nginx/html/charts/
   volumeMounts:
     - name: git-source-dir
       mountPath: /src
