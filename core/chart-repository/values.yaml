@@ -43,14 +43,35 @@ resources:
     cpu: 100m
     memory: 128Mi
 
+startupProbe:
+  httpGet:
+    path: /charts/
+    port: http
+  initialDelaySeconds: 2
+  periodSeconds: 2
+  timeoutSeconds: 2
+  successThreshold: 1
+  failureThreshold: 15
+
 livenessProbe:
   httpGet:
-    path: /
+    path: /charts/
     port: http
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
 readinessProbe:
   httpGet:
-    path: /
+    path: /charts/
     port: http
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
 
 volumes:
   - name: charts-dir
