@@ -148,11 +148,71 @@ repoExtractor:
 
 chartPackager:
   image: alpine/helm:3.20.2
+  envMap:
+    RETENTION_ENABLED: "true"
+    RETENTION_DAYS: "7"
+    RETENTION_KEEP: "5"
+    RETENTION_DRY_RUN: "false"
   command:
     - sh
     - -c
   script: |
     set -euo pipefail
+
+    cleanup_by_pattern() {
+      local dir="$1"
+      local pattern="$2"
+      local days="${RETENTION_DAYS:-7}"
+      local keep="${RETENTION_KEEP:-5}"
+      local dry_run="${RETENTION_DRY_RUN:-false}"
+
+      echo "Applying retention policy for ${pattern} in ${dir}..."
+
+      # List files matching the pattern, sorted by modification time (newest first)
+      local files
+      files=$(ls -1t "${dir}"/$(basename "${pattern}") 2>/dev/null || true)
+
+      if [ -z "$files" ]; then
+        echo "No files found matching pattern ${pattern} in ${dir}. Skipping cleanup."
+        return 0
+      fi
+
+      local count
+      count=$(echo "$files" | grep -c . || true)
+
+      if [ "$count" -gt "$keep" ]; then
+        # Select files after the Nth version for potential deletion
+        echo "$files" | tail -n +$((keep + 1)) | while read -r file; do
+          if [ -n "$(find "$file" -mtime +"$days" 2>/dev/null)" ]; then
+            if [ "${dry_run}" = "true" ]; then
+              echo "[DRY RUN] Would remove old version: $file"
+            else
+              echo "Removing old version: $file"
+              rm -f "$file"
+            fi
+          fi
+        done
+      fi
+    }
+
+    cleanup() {
+      local dir="$1"
+      echo "Starting cleanup for all charts in ${dir} (Policy: Keep ${RETENTION_KEEP:-5} versions, Max age ${RETENTION_DAYS:-7} days)..."
+
+      # Identify unique chart names by stripping the version and extension.
+      # Helm packages follow the pattern: <name>-<version>.tgz
+      local names
+      names=$(ls -1 "${dir}"/*.tgz 2>/dev/null | sed -E 's|.*/||; s|-[vV]?[0-9].*\.tgz$||' | sort -u || true)
+
+      if [ -z "$names" ]; then
+        echo "No chart files found in ${dir} to clean up."
+        return 0
+      fi
+
+      for name in $names; do
+        cleanup_by_pattern "$dir" "${name}-*.tgz"
+      done
+    }
 
     package_artifactory_jcr() {
       local schema_file="/src/core/artifactory-jcr/values.schema.json"
@@ -177,6 +237,11 @@ chartPackager:
 
     # Ensure the target directory path exists on the volume
     mkdir -p /usr/share/nginx/html/charts
+
+    if [ "${RETENTION_ENABLED:-false}" = "true" ]; then
+      echo "Running global artifact retention cleanup..."
+      cleanup "/usr/share/nginx/html/charts"
+    fi
 
     echo "Starting chart packaging process..."
     package_artifactory_jcr
