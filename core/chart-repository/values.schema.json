@@ -1,0 +1,282 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Chart Repository Values Schema",
+  "type": "object",
+  "required": [
+    "image",
+    "service",
+    "persistence",
+    "repoExtractor",
+    "chartPackager"
+  ],
+  "properties": {
+    "replicaCount": {
+      "description": "Number of desired pods for the chart repository deployment.",
+      "type": "integer",
+      "minimum": 1,
+      "default": 1
+    },
+    "image": {
+      "description": "Container image configuration for the main Nginx server.",
+      "type": "object",
+      "required": [
+        "repository",
+        "tag"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": [
+            "Always",
+            "Never",
+            "IfNotPresent"
+          ],
+          "default": "IfNotPresent"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    },
+    "imagePullSecrets": {
+      "description": "Secrets used to pull images from private registries.",
+      "type": "array"
+    },
+    "nameOverride": {
+      "description": "String to partially override the chart name.",
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "description": "String to fully override the release name.",
+      "type": "string"
+    },
+    "serviceAccount": {
+      "description": "ServiceAccount configuration for the pod.",
+      "type": "object",
+      "properties": {
+        "create": {
+          "description": "Specifies whether a ServiceAccount should be created.",
+          "type": "boolean",
+          "default": true
+        },
+        "automount": {
+          "description": "Whether to automatically mount the ServiceAccount token.",
+          "type": "boolean",
+          "default": true
+        },
+        "name": {
+          "description": "The name of the ServiceAccount to use. If not set and create is true, a name is generated using the fullname template.",
+          "type": "string"
+        }
+      }
+    },
+    "podAnnotations": {
+      "description": "Annotations to add to the pod metadata.",
+      "type": "object"
+    },
+    "podLabels": {
+      "description": "Labels to add to the pod metadata.",
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "description": "Pod-level security context (UID, GID, etc.).",
+      "type": "object",
+      "properties": {
+        "fsGroup": {
+          "description": "The GID that owns the pod's volumes.",
+          "type": "integer"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "fsGroupChangePolicy": {
+          "description": "Behavior when changing ownership and permissions of a volume.",
+          "type": "string"
+        }
+      }
+    },
+    "securityContext": {
+      "description": "Container-level security context settings.",
+      "type": "object",
+      "properties": {
+        "runAsNonRoot": {
+          "description": "Indicates that the container must run as a non-root user.",
+          "type": "boolean"
+        },
+        "allowPrivilegeEscalation": {
+          "description": "Allow a process to gain more privileges than its parent process.",
+          "type": "boolean"
+        }
+      }
+    },
+    "service": {
+      "description": "Kubernetes Service configuration for exposing the repository.",
+      "type": "object",
+      "required": [
+        "type",
+        "port"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ClusterIP",
+            "NodePort",
+            "LoadBalancer"
+          ],
+          "default": "ClusterIP"
+        },
+        "port": {
+          "description": "The port that the service will listen on.",
+          "type": "integer",
+          "default": 80
+        },
+        "containerPort": {
+          "description": "The port that the container listens on (Nginx unprivileged defaults to 8080).",
+          "type": "integer",
+          "default": 8080
+        }
+      }
+    },
+    "resources": {
+      "description": "CPU and memory resource limits and requests for the main container.",
+      "type": "object",
+      "properties": {
+        "limits": {
+          "description": "Maximum amount of resources allowed.",
+          "type": "object"
+        },
+        "requests": {
+          "description": "Minimum amount of resources required.",
+          "type": "object"
+        }
+      }
+    },
+    "startupProbe": {
+      "description": "Probe to verify that the application has started correctly.",
+      "type": "object"
+    },
+    "livenessProbe": {
+      "description": "Probe to verify that the application is still running.",
+      "type": "object"
+    },
+    "readinessProbe": {
+      "description": "Probe to verify that the application is ready to receive traffic.",
+      "type": "object"
+    },
+    "persistence": {
+      "description": "Persistent volume configuration for chart storage.",
+      "type": "object",
+      "required": [
+        "size"
+      ],
+      "properties": {
+        "storageClass": {
+          "description": "Storage class name for the PVC. Use '-' for default.",
+          "type": "string"
+        },
+        "size": {
+          "description": "Size of the persistent volume (e.g., 100Mi).",
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(Mi|Gi|Ti|Pi|Ei|m|k|M|G|T|P|E)?$"
+        },
+        "accessModes": {
+          "description": "Access modes for the persistent volume.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ReadWriteOnce",
+              "ReadOnlyMany",
+              "ReadWriteMany"
+            ]
+          }
+        }
+      }
+    },
+    "volumes": {
+      "description": "Additional volumes to define in the deployment spec.",
+      "type": "array"
+    },
+    "volumeMounts": {
+      "description": "Additional volume mounts for the main container.",
+      "type": "array"
+    },
+    "repoExtractor": {
+      "description": "Configuration for the init container that extracts source code from Flux.",
+      "type": "object",
+      "required": [
+        "image",
+        "script"
+      ],
+      "properties": {
+        "image": {
+          "description": "Container image for the extractor.",
+          "type": "string"
+        },
+        "envMap": {
+          "description": "Map of environment variables (e.g., FLUX_GIT_REPO_NAME).",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "command": {
+          "description": "Entrypoint command for the extractor.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "script": {
+          "description": "Shell script logic for artifact extraction.",
+          "type": "string"
+        }
+      }
+    },
+    "chartPackager": {
+      "description": "Configuration for the init container that packages Helm charts.",
+      "type": "object",
+      "required": [
+        "image",
+        "script"
+      ],
+      "properties": {
+        "image": {
+          "description": "Container image for the packager (should include Helm CLI).",
+          "type": "string"
+        },
+        "command": {
+          "description": "Entrypoint command for the packager.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "script": {
+          "description": "Shell script logic for packaging charts and generating index.yaml.",
+          "type": "string"
+        }
+      }
+    },
+    "nodeSelector": {
+      "description": "Node labels for pod assignment.",
+      "type": "object"
+    },
+    "tolerations": {
+      "description": "Pod tolerations for nodes with taints.",
+      "type": "array"
+    },
+    "affinity": {
+      "description": "Pod affinity and anti-affinity rules.",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}
