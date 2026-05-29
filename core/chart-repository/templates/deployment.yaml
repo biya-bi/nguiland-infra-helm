@@ -40,6 +40,10 @@ spec:
           volumeMounts:
             - name: git-source-dir
               mountPath: /src
+          {{- with .Values.repoExtractor.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.repoExtractor.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -56,6 +60,10 @@ spec:
               mountPath: /src
             - name: charts-dir
               mountPath: /usr/share/nginx/html/charts
+          {{- with .Values.chartPackager.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.chartPackager.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}

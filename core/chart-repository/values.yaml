@@ -39,9 +39,11 @@ resources:
   limits:
     cpu: 100m
     memory: 128Mi
+    ephemeral-storage: 100Mi
   requests:
     cpu: 100m
     memory: 128Mi
+    ephemeral-storage: 50Mi
 
 startupProbe:
   httpGet:
@@ -95,6 +97,11 @@ repoExtractor:
   command: 
     - sh
     - -c
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+      ephemeral-storage: 50Mi
   script: |
     set -euo pipefail
 
@@ -156,6 +163,11 @@ chartPackager:
   command:
     - sh
     - -c
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+      ephemeral-storage: 100Mi
   script: |
     set -euo pipefail
 
