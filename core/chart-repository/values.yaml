@@ -135,6 +135,9 @@ repoExtractor:
 
       artifact_url="$(echo "${response}" | grep -oE 'http://source-controller[^"]+' | head -n 1 || true)"
 
+      # Strip the trailing dot from the cluster.local domain if it exists
+      artifact_url="$(echo "${artifact_url}" | sed 's/\.local\./.local/g')"
+
       if [ -z "${artifact_url:-}" ]; then
         echo "ERROR: Could not parse artifact URL for ${repo_name}. API Response:"
         echo "${response}" | head -n 5
