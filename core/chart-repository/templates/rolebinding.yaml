@@ -6,10 +6,26 @@ metadata:
   labels:
     {{- include "chart-repository.labels" . | nindent 4 }}
 subjects:
+- kind: ServiceAccount
+  name: {{ include "chart-repository.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ include "chart-repository.fullname" . }}
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "chart-repository.fullname" . }}-proxy
+  namespace: flux-system
+  labels:
+    {{- include "chart-repository.labels" . | nindent 4 }}
+subjects:
   - kind: ServiceAccount
     name: {{ include "chart-repository.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
-  roleRef:
-    kind: Role
-    name: {{ include "chart-repository.fullname" . }}
-    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: {{ include "chart-repository.fullname" . }}-proxy
+  apiGroup: rbac.authorization.k8s.io

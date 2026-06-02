@@ -91,11 +91,11 @@ tolerations: []
 affinity: {}
 
 repoExtractor:
-  image: alpine/helm:3.20.2
+  image: docker.io/bitnami/kubectl@sha256:0ed36a7f6a94c1b82d70811ed03caf3df92b4b2b8f8817d0f726f0f3a26e64af
   envMap:
     FLUX_GIT_REPO_NAME: helm
   command: 
-    - sh
+    - /bin/bash
     - -c
   resources:
     requests:
@@ -105,56 +105,24 @@ repoExtractor:
   script: |
     set -euo pipefail
 
-    extract_flux_artifact() {
-      local current_namespace
-      local namespace
-      local repo_name
-      local token
-      local ca_cert
-      local api_server
-      local response
-      local artifact_url
+    repo_name="${FLUX_GIT_REPO_NAME:-}"
+    current_ns="$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
+    namespace="${FLUX_GIT_REPO_NAMESPACE:-${current_ns}}"
 
-      current_namespace="$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
-      namespace="${FLUX_GIT_REPO_NAMESPACE:-${current_namespace}}"
-      repo_name="${FLUX_GIT_REPO_NAME:-}"
-      token="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
-      ca_cert="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-      api_server="https://kubernetes.default.svc"
+    echo "🔍 Querying GitRepository ${namespace}/${repo_name}..."
+    artifact_url=$(kubectl get gitrepository "${repo_name}" -n "${namespace}" -o jsonpath='{.status.artifact.url}')
 
-      if [ -z "${repo_name}" ]; then
-        echo "ERROR: FLUX_GIT_REPO_NAME environment variable is not set or is blank."
-        exit 1
-      fi
+    if [ -z "${artifact_url}" ]; then
+      echo "ERROR: Artifact URL not found in GitRepository status."
+      exit 1
+    fi
 
-      echo "Querying Kubernetes API for Flux GitRepository: ${namespace}/${repo_name}"
+    path="/$(echo "${artifact_url}" | cut -d/ -f4-)"
 
-      response="$(curl -sS --fail --cacert "${ca_cert}" \
-        -H "Authorization: Bearer ${token}" \
-        "${api_server}/apis/source.toolkit.fluxcd.io/v1/namespaces/${namespace}/gitrepositories/${repo_name}")"
+    echo "📥 Downloading artifact via API server proxy: ${path}"
+    kubectl get --raw "/api/v1/namespaces/flux-system/services/http:source-controller:80/proxy${path}" > /src/charts.tar.gz
 
-      artifact_url="$(echo "${response}" | grep -oE 'http://source-controller[^"]+' | head -n 1 || true)"
-
-      # Strip the trailing dot from the cluster.local domain if it exists
-      artifact_url="$(echo "${artifact_url}" | sed 's/\.local\./.local/g')"
-
-      if [ -z "${artifact_url:-}" ]; then
-        echo "ERROR: Could not parse artifact URL for ${repo_name}. API Response:"
-        echo "${response}" | head -n 5
-        exit 1
-      fi
-
-      echo "Downloading and extracting artifact from: ${artifact_url}"
-      curl -sSL --fail "${artifact_url}" | tar -xzf - -C /src
-
-      echo "Artifact ${repo_name} successfully extracted to /src"
-    }
-
-    # Ensure /src exists before extraction
-    mkdir -p /src
-
-    # Extract the source code from Flux
-    extract_flux_artifact
+    echo "✅ Download complete. Artifact saved to /src/charts.tar.gz"
 
 chartPackager:
   image: alpine/helm:3.20.2
@@ -180,6 +148,15 @@ chartPackager:
       rm -rf /src/*
     }
     trap cleanup_src EXIT
+
+    echo "📦 Extracting source code..."
+    if [ -f /src/charts.tar.gz ]; then
+      tar -xzf /src/charts.tar.gz -C /src
+      rm /src/charts.tar.gz
+    else
+      echo "ERROR: Source tarball /src/charts.tar.gz not found!"
+      exit 1
+    fi
 
     cleanup_by_pattern() {
       local dir="$1"
