@@ -254,7 +254,6 @@ chartPackager:
 
       echo "Packaging chart artifactory-jcr..."
       helm package /src/core/artifactory-jcr -d /usr/share/nginx/html/charts/
-      echo "Helm repository index successfully generated!"
     }
 
     # Ensure the target directory path exists on the volume
@@ -272,3 +271,4 @@ chartPackager:
 
     echo "Generating Helm repository index..."
     helm repo index /usr/share/nginx/html/charts/
+    echo "Helm repository index successfully generated!"
