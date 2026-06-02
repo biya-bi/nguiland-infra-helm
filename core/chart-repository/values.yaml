@@ -233,6 +233,17 @@ chartPackager:
       helm package /src/core/artifactory-jcr -d /usr/share/nginx/html/charts/
     }
 
+    package_postgres() {
+      echo "Building chart dependencies for postgres..."
+      helm dependency build /src/core/postgres
+
+      echo "Linting chart configuration for postgres..."
+      helm lint /src/core/postgres
+
+      echo "Packaging chart postgres..."
+      helm package /src/core/postgres -d /usr/share/nginx/html/charts/
+    }
+
     # Ensure the target directory path exists on the volume
     mkdir -p /usr/share/nginx/html/charts
 
@@ -243,6 +254,7 @@ chartPackager:
 
     echo "Starting chart packaging process..."
     package_artifactory_jcr
+    package_postgres
 
     echo "All chart packaging successfully completed!"
 
