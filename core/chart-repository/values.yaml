@@ -259,6 +259,15 @@ chartPackager:
     # Ensure the target directory path exists on the volume
     mkdir -p /usr/share/nginx/html/charts
     
+    # Initialize the index file immediately. This ensures that as soon as the
+    # init container completes (and the main Nginx container starts), the
+    # file required by the probes is guaranteed to exist, even if the
+    # packaging process below takes a long time or is partially skipped.
+    if [ ! -f /usr/share/nginx/html/charts/index.yaml ]; then
+      echo "Initializing Helm repository index..."
+      helm repo index /usr/share/nginx/html/charts/
+    fi
+
     if [ "${RETENTION_ENABLED:-false}" = "true" ]; then
       echo "Running global artifact retention cleanup..."
       cleanup "/usr/share/nginx/html/charts"
