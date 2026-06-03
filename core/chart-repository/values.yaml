@@ -213,49 +213,60 @@ chartPackager:
       done
     }
 
-    package_artifactory_jcr() {
-      local schema_file="/src/core/artifactory-jcr/values.schema.json"
+    package() {
+      local chart_dir="$1"
+      local full_path="/src/${chart_dir}"
+      local schema_file="${full_path}/values.schema.json"
+      local schema_modified="false"
 
-      echo "Modifying values.schema.json reference path for artifactory-jcr..."
-      # Swap the relative file path with the absolute container path
-      sed -i 's|file://../artifactory-common/values.schema.json|file:///src/core/artifactory-common/values.schema.json|g' "${schema_file}"
+      echo "================================================================================"
+      echo "Processing chart: ${chart_dir}"
+      echo "================================================================================"
 
-      echo "Building chart dependencies for artifactory-jcr..."
-      helm dependency build /src/core/artifactory-jcr
+      if [ ! -d "${full_path}" ]; then
+        echo "⚠️ Skipping ${chart_dir}: directory not found in /src"
+        return 0
+      fi
 
-      echo "Linting chart configuration for artifactory-jcr..."
-      helm lint /src/core/artifactory-jcr
+      if [ -f "${schema_file}" ]; then
+        echo "🔧 Converting relative file:// paths in ${chart_dir}/values.schema.json to absolute..."
+        cp "${schema_file}" "${schema_file}.bak"
+        # Prepend the absolute path to handle relative references during linting
+        sed -i "s|file://\([^/]\)|file://${full_path}/\1|g" "${schema_file}"
+        schema_modified="true"
+      fi
 
-      # The schema is only needed for the linting step above.
-      rm "${schema_file}"
+      echo "▶ Building dependencies for ${chart_dir}..."
+      helm dependency build "${full_path}"
 
-      echo "Packaging chart artifactory-jcr..."
-      helm package /src/core/artifactory-jcr -d /usr/share/nginx/html/charts/
-    }
+      echo "▶ Linting ${chart_dir}..."
+      helm lint "${full_path}"
 
-    package_postgres() {
-      echo "Building chart dependencies for postgres..."
-      helm dependency build /src/core/postgres
+      if [ "${schema_modified}" = "true" ]; then
+        echo "🗑️  Removing modified values.schema.json before packaging..."
+        rm "${schema_file}"
+      fi
 
-      echo "Linting chart configuration for postgres..."
-      helm lint /src/core/postgres
+      echo "📦 Packaging ${chart_dir}..."
+      helm package "${full_path}" -d /usr/share/nginx/html/charts/
 
-      echo "Packaging chart postgres..."
-      helm package /src/core/postgres -d /usr/share/nginx/html/charts/
+      if [ "${schema_modified}" = "true" ]; then
+        echo "🔄 Restoring original values.schema.json..."
+        mv "${schema_file}.bak" "${schema_file}"
+      fi
     }
 
     # Ensure the target directory path exists on the volume
     mkdir -p /usr/share/nginx/html/charts
-
+    
     if [ "${RETENTION_ENABLED:-false}" = "true" ]; then
       echo "Running global artifact retention cleanup..."
       cleanup "/usr/share/nginx/html/charts"
     fi
 
     echo "Starting chart packaging process..."
-    package_artifactory_jcr
-    package_postgres
-
+    package "core/artifactory-jcr"
+    package "core/postgres"
     echo "All chart packaging successfully completed!"
 
     echo "Generating Helm repository index..."
