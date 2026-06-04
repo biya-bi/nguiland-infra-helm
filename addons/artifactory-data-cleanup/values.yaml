@@ -18,14 +18,17 @@ podSecurityContext:
 
 envMap:
   SYSTEM_NAMES: "jcr oss"
+  # If left empty, the namespace of the pod will be used.
+  SYSTEM_NAMESPACE: ""
 
 script: |
   set -euo pipefail
 
-  cleanup_remote_pod() {
+  # This function is serialized and executed inside the target Artifactory pod
+  cleanup_pod() {
     set -euo pipefail
 
-    local pod_name="$1"
+    local pod_name="${1:-unknown}"
 
     local red='\033[0;31m'
     local yellow='\033[0;33m'
@@ -69,21 +72,71 @@ script: |
     fi
   }
 
-  printf "=== Artifactory Data Cleanup ===\n"
+  get_namespace() {
+    if [ -n "${SYSTEM_NAMESPACE:-}" ]; then
+      echo "$SYSTEM_NAMESPACE"
+    else
+      cat /var/run/secrets/kubernetes.io/serviceaccount/namespace
+    fi
+  }
 
-  yellow='\033[0;33m'
-  no_color='\033[0m'
+  get_ready_system_names() {
+    local namespace="${1:-}"
+    local system_names="${2:-}"
+    local yellow='\033[0;33m'
+    local no_color='\033[0m'
 
-  for system_name in $SYSTEM_NAMES; do
-    # Get pod name
-    pod_name=$(kubectl get pod -l app.kubernetes.io/name=artifactory-${system_name} -o jsonpath='{.items[*].metadata.name}' | awk '{print $1}')
-
-    if [ -z "$pod_name" ]; then
-      printf "%bWARN: No active pod found for ${system_name}.%b\n" "$yellow" "$no_color"
-      continue
+    if [ -z "$system_names" ]; then
+      printf "%bWARN: The system names list is empty. No systems to process.%b\n" "$yellow" "$no_color" >&2
+      return 0
     fi
 
-    printf "INFO: Processing system %s in pod %s\n" "$system_name" "$pod_name"
+    local ready_system_names=""
+    for name in $system_names; do
+      # Check if any pod for this system is currently Ready (True)
+      if kubectl get pods -n "$namespace" -l "app.kubernetes.io/name=artifactory-${name}" -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; then
+        ready_system_names="${ready_system_names}${name} "
+      fi
+    done
 
-    kubectl exec "$pod_name" -c "artifactory-${system_name}" -- bash -c "$(declare -f cleanup_remote_pod); cleanup_remote_pod $pod_name"
-  done
+    if [ -z "$ready_system_names" ]; then
+      printf "%bWARN: None of the provided systems (${system_names}) are currently ready or deployed.%b\n" "$yellow" "$no_color" >&2
+      return 0
+    fi
+
+    echo "${ready_system_names% }"
+  }
+
+  cleanup_remote_pod() {
+    local namespace
+    namespace=$(get_namespace)
+
+    local ready_system_names
+    ready_system_names=$(get_ready_system_names "$namespace" "${SYSTEM_NAMES:-}")
+
+    if [ -z "$ready_system_names" ]; then
+      return 0
+    fi
+
+    local yellow='\033[0;33m'
+    local no_color='\033[0m'
+
+    for system_name in $ready_system_names; do
+      # Get the first active pod name for the system
+      local pod_name
+      pod_name=$(kubectl get pod -n "$namespace" -l "app.kubernetes.io/name=artifactory-${system_name}" -o jsonpath='{.items[*].metadata.name}' | awk '{print $1}')
+
+      if [ -z "$pod_name" ]; then
+        printf "%bWARN: No active pod found for ${system_name}.%b\n" "$yellow" "$no_color"
+        continue
+      fi
+
+      printf "INFO: Processing system %s in pod %s\n" "$system_name" "$pod_name"
+
+      # Execute the cleanup logic inside the remote pod
+      kubectl exec -n "$namespace" "$pod_name" -c "artifactory-${system_name}" -- bash -c "$(declare -f cleanup_pod); cleanup_pod $pod_name"
+    done
+  }
+
+  printf "=== Artifactory Data Cleanup ===\n"
+  cleanup_remote_pod
