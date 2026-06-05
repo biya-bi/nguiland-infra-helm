@@ -213,6 +213,46 @@ chartPackager:
       done
     }
 
+    get_chart_directories() {
+      local base_dir="$1"
+      # Find all Chart.yaml files recursively. Does not follow symbolic links by default.
+      find "${base_dir}" -name "Chart.yaml" | while read -r chart_yaml; do
+        local chart_dir
+        chart_dir=$(dirname "${chart_yaml}")
+
+        # Skip if the directory itself is a symbolic link to avoid loops
+        if [ ! -L "${chart_dir}" ]; then
+          # Return the path relative to /src (e.g., core/postgres)
+          echo "${chart_dir#/src/}"
+        fi
+      done
+    }
+
+    package_all() {
+      local base_dir="$1"
+      local exclude_charts="${2:-}"
+
+      local chart_dirs
+      chart_dirs=$(get_chart_directories "${base_dir}")
+
+      for chart_rel_path in ${chart_dirs}; do
+        local chart_yaml="/src/${chart_rel_path}/Chart.yaml"
+        local name
+        name=$(grep -m1 '^name:' "${chart_yaml}" | sed 's/^name:[[:space:]]*//' | tr -d '\r')
+
+        # We apply the "Guard Space" (padding with spaces) here to ensure
+        # we match the whole name and not just a substring.
+        case " ${exclude_charts} " in
+          *" ${name} "*)
+            echo "⏭️  Excluding chart per exclude_charts parameter: ${name}"
+            continue
+            ;;
+        esac
+
+        package "${chart_rel_path}"
+      done
+    }
+
     package() {
       local chart_dir="$1"
       local full_path="/src/${chart_dir}"
@@ -274,8 +314,7 @@ chartPackager:
     fi
 
     echo "Starting chart packaging process..."
-    package "core/artifactory-jcr"
-    package "core/postgres"
+    package_all "/src/core" "artifactory-common chart-repository"
     echo "All chart packaging successfully completed!"
 
     echo "Generating Helm repository index..."
