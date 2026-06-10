@@ -94,7 +94,7 @@ script: |
     local ready_system_names=""
     for name in $system_names; do
       # Check if any pod for this system is currently Ready (True)
-      if kubectl get pods -n "$namespace" -l "app.kubernetes.io/name=artifactory-${name}" -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; then
+      if kubectl get pods --request-timeout=20s -n "$namespace" -l "app.kubernetes.io/name=artifactory-${name}" -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; then
         ready_system_names="${ready_system_names}${name} "
       fi
     done
@@ -124,7 +124,7 @@ script: |
     for system_name in $ready_system_names; do
       # Get the first active pod name for the system
       local pod_name
-      pod_name=$(kubectl get pod -n "$namespace" -l "app.kubernetes.io/name=artifactory-${system_name}" -o jsonpath='{.items[*].metadata.name}' | awk '{print $1}')
+      pod_name=$(kubectl get pod --request-timeout=20s -n "$namespace" -l "app.kubernetes.io/name=artifactory-${system_name}" -o jsonpath='{.items[*].metadata.name}' | awk '{print $1}')
 
       if [ -z "$pod_name" ]; then
         printf "%bWARN: No active pod found for ${system_name}.%b\n" "$yellow" "$no_color"
@@ -134,7 +134,7 @@ script: |
       printf "INFO: Processing system %s in pod %s\n" "$system_name" "$pod_name"
 
       # Execute the cleanup logic inside the remote pod
-      kubectl exec -n "$namespace" "$pod_name" -c "artifactory-${system_name}" -- bash -c "$(declare -f cleanup_pod); cleanup_pod $pod_name"
+      kubectl exec --request-timeout=20s -n "$namespace" "$pod_name" -c "artifactory-${system_name}" -- bash -c "$(declare -f cleanup_pod); cleanup_pod $pod_name"
     done
   }
 
