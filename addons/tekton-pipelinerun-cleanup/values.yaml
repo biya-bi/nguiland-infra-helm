@@ -14,7 +14,8 @@ serviceAccount:
 schedule: "0 * * * *"
 
 envMap:
-  NAMESPACE: "infra"
+  # If left empty, the namespace of the pod will be used.
+  NAMESPACE: ""
   MIN_AGE_MINUTES: "60"
   DRY_RUN: "false"
   PARALLELISM: "5"
@@ -27,8 +28,15 @@ script: |
     echo "[$(date)] $*";
   }
 
+  get_namespace() {
+    if [ -n "${NAMESPACE:-}" ]; then
+      echo "$NAMESPACE"
+    else
+      cat /var/run/secrets/kubernetes.io/serviceaccount/namespace
+    fi
+  }
+
   # Validate required env vars
-  : "${NAMESPACE:?ERROR: NAMESPACE is required}"
   : "${MIN_AGE_MINUTES:?ERROR: MIN_AGE_MINUTES is required}"
   : "${DRY_RUN:?ERROR: DRY_RUN is required}"
   : "${PARALLELISM:?ERROR: PARALLELISM is required}"
@@ -48,10 +56,12 @@ script: |
     *) echo "ERROR: DRY_RUN must be 'true' or 'false'"; exit 1 ;;
   esac
 
-  log "Starting cleanup (dry-run=$DRY_RUN, namespace=$NAMESPACE)"
+  namespace=$(get_namespace)
+
+  log "Starting cleanup (dry-run=$DRY_RUN, namespace=$namespace)"
 
   now=$(date +%s)
-  results=$(kubectl get pipelineruns -n "$NAMESPACE" \
+  results=$(kubectl get pipelineruns -n "$namespace" \
     -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.creationTimestamp}{" "}{.status.conditions[0].status}{"\n"}{end}' 2>/dev/null || true)
 
   if [ -z "$results" ]; then
@@ -95,7 +105,7 @@ script: |
   if [ "$DRY_RUN" = "false" ] && [ -n "$to_delete" ]; then
       log "Deleting PipelineRuns with parallelism=$PARALLELISM"
       echo -e "$to_delete" | xargs -P "$PARALLELISM" -I {} sh -c '
-          if kubectl delete pipelinerun "{}" -n "'"$NAMESPACE"'" --ignore-not-found=true >/dev/null 2>&1; then
+          if kubectl delete pipelinerun "{}" -n "'"$namespace"'" --ignore-not-found=true >/dev/null 2>&1; then
               echo "Deleted: {}"
           else
               echo "FAILED: {}"
