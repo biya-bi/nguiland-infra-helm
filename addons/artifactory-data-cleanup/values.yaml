@@ -94,7 +94,7 @@ script: |
     local ready_system_names=""
     for name in $system_names; do
       # Check if any pod for this system is currently Ready (True)
-      if kubectl get pods --request-timeout=20s -n "$namespace" -l "app.kubernetes.io/name=artifactory-${name}" -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q "True"; then
+      if kubectl get pods --request-timeout=20s -n "$namespace" -l "app.kubernetes.io/name=artifactory-${name}" -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' | grep -qi "true"; then
         ready_system_names="${ready_system_names}${name} "
       fi
     done
