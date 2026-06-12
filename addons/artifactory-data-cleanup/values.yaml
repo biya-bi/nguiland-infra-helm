@@ -24,54 +24,6 @@ envMap:
 script: |
   set -euo pipefail
 
-  # This function is serialized and executed inside the target Artifactory pod
-  cleanup_pod() {
-    set -euo pipefail
-
-    local pod_name="${1:-unknown}"
-
-    local red='\033[0;31m'
-    local yellow='\033[0;33m'
-    local no_color='\033[0m'
-
-    printf "INFO: Running cleanup in pod %s\n" "$pod_name"
-
-    local dir="/opt/jfrog/artifactory/var"
-
-    if [ ! -d "$dir" ]; then
-      printf "%bERROR: Directory does not exist: $dir%b\n" "$red" "$no_color"
-      return 0
-    fi
-
-    local system_yaml="/opt/jfrog/artifactory/var/etc/system.yaml"
-
-    if [ ! -f "$system_yaml" ]; then
-      printf "%bERROR: File does not exist: $system_yaml%b\n" "$red" "$no_color"
-      return 0
-    fi
-
-    local raw_allow
-    raw_allow=$(grep -A 2 "observability:" "$system_yaml" | grep -A 1 "consumption:" | grep "allow:" | head -1 | sed "s/.*allow: *//")
-    local allow
-    allow=$(printf '%s\n' "$raw_allow" | sed -e 's/^[[:space:]]*//;s/[[:space:]]*$//' -e 's/"//g' -e "s/'//g")
-
-    if [ -z "$allow" ]; then
-      local archived_dir="$dir/data/metadata/usage/archived"
-      if [ -d "$archived_dir" ]; then
-        if [ -n "$(ls "$archived_dir" 2>/dev/null)" ]; then
-          rm -rf "$archived_dir"/*
-          printf "INFO: Deleted contents of %s\n" "$archived_dir"
-        else
-          printf "INFO: No files to delete in %s\n" "$archived_dir"
-        fi
-      else
-        printf "%bWARN: Directory does not exist: $archived_dir%b\n" "$yellow" "$no_color"
-      fi
-    else
-      printf "%bINFO: observability.consumption.allow is set to '$allow', skipping deletion%b\n" "$yellow" "$no_color"
-    fi
-  }
-
   get_namespace() {
     if [ -n "${SYSTEM_NAMESPACE:-}" ]; then
       echo "$SYSTEM_NAMESPACE"
@@ -133,8 +85,51 @@ script: |
 
       printf "INFO: Processing system %s in pod %s\n" "$system_name" "$pod_name"
 
-      # Execute the cleanup logic inside the remote pod
-      kubectl exec --request-timeout=20s -n "$namespace" "$pod_name" -c "artifactory-${system_name}" -- bash -c "$(declare -f cleanup_pod); cleanup_pod $pod_name"
+      # Stream the execution flatly via stdin to safely sidestep nested string/quoting errors completely
+      kubectl exec -i --request-timeout=20s -n "$namespace" "$pod_name" -c "artifactory-${system_name}" -- /bin/bash << 'EOF'
+      set -euo pipefail
+
+      local_pod="${1:-unknown}"
+      red='\033[0;31m'
+      yellow='\033[0;33m'
+      no_color='\033[0m'
+
+      printf "INFO: Running cleanup inside pod %s\n" "${local_pod}"
+
+      dir="/opt/jfrog/artifactory/var"
+
+      if [ ! -d "$dir" ]; then
+        printf "%bERROR: Directory does not exist: $dir%b\n" "$red" "$no_color"
+        exit 0
+      fi
+
+      system_yaml="/opt/jfrog/artifactory/var/etc/system.yaml"
+
+      if [ ! -f "$system_yaml" ]; then
+        printf "%bERROR: File does not exist: $system_yaml%b\n" "$red" "$no_color"
+        exit 0
+      fi
+
+      raw_allow=$(grep -A 2 "observability:" "$system_yaml" | grep -A 1 "consumption:" | grep "allow:" | head -1 | sed "s/.*allow: *//")
+      # Trimming spaces and quotes safely using standard characters without single-quote encapsulation
+      allow=$(echo "${raw_allow}" | tr -d '[:space:]' | tr -d '"' | tr -d "'")
+
+      if [ -z "$allow" ]; then
+        archived_dir="$dir/data/metadata/usage/archived"
+        if [ -d "$archived_dir" ]; then
+          if [ -n "$(ls "$archived_dir" 2>/dev/null)" ]; then
+            rm -rf "$archived_dir"/*
+            printf "INFO: Deleted contents of %s\n" "$archived_dir"
+          else
+            printf "INFO: No files to delete in %s\n" "$archived_dir"
+          fi
+        else
+          printf "%bWARN: Directory does not exist: $archived_dir%b\n" "$yellow" "$no_color"
+        fi
+      else
+        printf "%bINFO: observability.consumption.allow is set to '%s', skipping deletion%b\n" "$yellow" "${allow}" "$no_color"
+      fi
+  EOF
     done
   }
 
