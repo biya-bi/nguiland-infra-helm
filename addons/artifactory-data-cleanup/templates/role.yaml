@@ -10,8 +10,12 @@ rules:
     - ""
   resources:
     - pods
-    - pods/exec
   verbs:
     - get
     - list
+- apiGroups:
+    - ""
+  resources:
+    - pods/exec
+  verbs:
     - create
