@@ -1,4 +1,6 @@
 {{- define "artifactory-common.deployment" -}}
+{{- $values := .Values | toYaml | fromYaml -}}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -140,6 +142,27 @@ spec:
             {{- else if (index .Values "artifactory-common" "extraEnv") }}
             {{- toYaml (index .Values "artifactory-common" "extraEnv") | nindent 12 }}
             {{- end }}
+        - name: cleanup-sidecar
+          image: bash:5.3
+          command:
+            - /run/scripts/cleanup/start.sh
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - bash
+                  - -c
+                  - /run/scripts/cleanup/stop.sh > /proc/1/fd/1 2>&1
+          volumeMounts:
+            - mountPath: /run/scripts/cleanup
+              name: {{ include "artifactory-common.fullname" . }}-cleanup-scripts
+            - mountPath: /run/scripts/util
+              name: {{ include "artifactory-common.fullname" . }}-util-scripts
+            - mountPath: /var/opt/jfrog/artifactory
+              name: {{ include "artifactory-common.fullname" . }}-data
+          env:
+            - name: ARTIFACTORY_PING_URL
+              value: {{ dig "cleanup" "pingUrl" "http://localhost:8082/artifactory/api/system/ping" $values | quote }}
       volumes:
         - name: {{ include "artifactory-common.fullname" . }}-entrypoint
           configMap:
@@ -158,6 +181,13 @@ spec:
           configMap:
             name: {{ include "artifactory-common.fullname" . }}-config
             defaultMode: 0644
+        - name: {{ include "artifactory-common.fullname" . }}-cleanup-scripts
+          configMap:
+            name: {{ include "artifactory-common.fullname" . }}-cleanup-scripts
+            defaultMode: 0755
+        - name: {{ include "artifactory-common.fullname" . }}-util-scripts
+          configMap:
+            name: {{ include "artifactory-common.fullname" . }}-util-scripts
         {{- with .Values.volumes | default (index .Values "artifactory-common" "volumes") }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

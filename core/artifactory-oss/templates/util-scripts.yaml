@@ -1,0 +1,1 @@
+{{- include "artifactory-common.util-scripts" . -}}

@@ -1,0 +1,2 @@
+{{- include "artifactory-common.cleanup-scripts" . -}}
+
