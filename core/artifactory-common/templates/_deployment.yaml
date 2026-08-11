@@ -4,7 +4,7 @@
 {{- /* Deployment Strategy and Replica Configuration */ -}}
 {{- $strategy := dig "strategy" dict $values | default (dig "artifactory-common" "strategy" dict $values) | default (dict "type" "Recreate") -}}
 {{- $autoscalingEnabled := dig "autoscaling" "enabled" false $values | default (dig "artifactory-common" "autoscaling" "enabled" false $values) -}}
-{{- $replicaCount := dig "replicaCount" $values | default (dig "artifactory-common" "replicaCount" $values) | default 1 -}}
+{{- $replicaCount := dig "replicaCount" nil $values | default (dig "artifactory-common" "replicaCount" nil $values) | default 1 -}}
 
 {{- /* Pod Security Context */ -}}
 {{- $podSecurityContext := $values.podSecurityContext | default (index $values "artifactory-common" "podSecurityContext") | default dict | deepCopy -}}
@@ -20,9 +20,9 @@
 {{- $initContainerSecurityContext := dict "runAsUser" 0 "runAsGroup" 0 -}}
 
 {{- /* Service Configuration */ -}}
-{{- $servicePort := dig "service" "port" $values | default (dig "artifactory-common" "service" "port" $values) | default 8082 -}}
-{{- $serviceName := dig "service" "name" "http" $values | default (dig "artifactory-common" "service" "name" "http" $values) -}}
-{{- $serviceProtocol := dig "service" "protocol" "TCP" $values | default (dig "artifactory-common" "service" "protocol" "TCP" $values) -}}
+{{- $servicePort := dig "service" "port" nil $values | default (dig "artifactory-common" "service" "port" nil $values) | default 8082 -}}
+{{- $serviceName := dig "service" "name" nil $values | default (dig "artifactory-common" "service" "name" nil $values) | default "http" -}}
+{{- $serviceProtocol := dig "service" "protocol" nil $values | default (dig "artifactory-common" "service" "protocol" nil $values) | default "TCP" -}}
 
 {{- /* Startup Probe */ -}}
 {{- $startupProbe := dig "startupProbe" dict $values | default (dig "artifactory-common" "startupProbe" dict $values) | deepCopy -}}
@@ -54,9 +54,9 @@
   {{- $allEnvs = append $allEnvs (dict "name" $k "value" ($v | toString | quote)) -}}
 {{- end -}}
 {{- $allEnvs = concat $allEnvs $extraEnv -}}
-
+ 
 {{- /* Data Chown Configuration */ -}}
-{{- $dataChownConfig := dig "dataChown" $values | default (dig "artifactory-common" "dataChown" $values) -}}
+{{- $dataChownConfig := dig "dataChown" nil $values | default (dig "artifactory-common" "dataChown" nil $values) -}}
 {{- $dataChownEnabled := true -}}
 {{- if kindIs "map" $dataChownConfig -}}
   {{- $dataChownEnabled = dig "enabled" true $dataChownConfig -}}
@@ -70,21 +70,21 @@
 {{- $tolerations := dig "tolerations" list $values | default (dig "artifactory-common" "tolerations" list $values) -}}
 
 {{- /* Image and Command Configuration */ -}}
-{{- $imageRepository := dig "image" "repository" $values | default (dig "artifactory-common" "image" "repository" $values) -}}
-{{- $imageTag := dig "image" "tag" .Chart.AppVersion $values | default (dig "artifactory-common" "image" "tag" .Chart.AppVersion $values) -}}
-{{- $imagePullPolicy := dig "image" "pullPolicy" "IfNotPresent" $values | default (dig "artifactory-common" "image" "pullPolicy" "IfNotPresent" $values) -}}
+{{- $imageRepository := dig "image" "repository" nil $values | default (dig "artifactory-common" "image" "repository" nil $values) -}}
+{{- $imageTag := dig "image" "tag" nil $values | default (dig "artifactory-common" "image" "tag" nil $values) | default .Chart.AppVersion -}}
+{{- $imagePullPolicy := dig "image" "pullPolicy" nil $values | default (dig "artifactory-common" "image" "pullPolicy" nil $values) | default "IfNotPresent" -}}
 {{- $imagePullSecrets := dig "imagePullSecrets" list $values | default (dig "artifactory-common" "imagePullSecrets" list $values) -}}
-{{- $commands := dig "commands" (list "/run/scripts/artifactory/run.sh") $values | default (dig "artifactory-common" "commands" (list "/run/scripts/artifactory/run.sh") $values) -}}
+{{- $commands := dig "commands" nil $values | default (dig "artifactory-common" "commands" nil $values) | default (list "/run/scripts/artifactory/run.sh") -}}
 
 {{- /* Volume and Annotation/Label Configuration */ -}}
 {{- $extraVolumes := dig "volumes" list $values | default (dig "artifactory-common" "volumes" list $values) -}}
 {{- $extraVolumeMounts := dig "volumeMounts" list $values | default (dig "artifactory-common" "volumeMounts" list $values) -}}
 {{- $podAnnotations := dig "podAnnotations" dict $values | default (dig "artifactory-common" "podAnnotations" dict $values) -}}
 {{- $podLabels := dig "podLabels" dict $values | default (dig "artifactory-common" "podLabels" dict $values) -}}
-{{- $systemName := dig "systemName" .Chart.Name $values | default (dig "artifactory-common" "systemName" .Chart.Name $values) -}}
+{{- $systemName := dig "systemName" nil $values | default (dig "artifactory-common" "systemName" nil $values) | default .Chart.Name -}}
 
 {{- /* Sidecar Configuration */ -}}
-{{- $cleanupPingUrl := dig "cleanup" "pingUrl" (printf "http://localhost:%d/artifactory/api/system/ping" $servicePort) $values | quote -}}
+{{- $cleanupPingUrl := dig "cleanup" "pingUrl" nil $values | default (printf "http://localhost:%d/artifactory/api/system/ping" $servicePort) | quote -}}
 
 apiVersion: apps/v1
 kind: Deployment
