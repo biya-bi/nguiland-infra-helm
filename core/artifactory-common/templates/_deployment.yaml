@@ -51,7 +51,7 @@
 {{- $extraEnv := dig "extraEnv" list $values | default (dig "artifactory-common" "extraEnv" list $values) -}}
 {{- $allEnvs := list -}}
 {{- range $k, $v := $envMap -}}
-  {{- $allEnvs = append $allEnvs (dict "name" $k "value" ($v | toString | quote)) -}}
+  {{- $allEnvs = append $allEnvs (dict "name" $k "value" ($v | toString)) -}}
 {{- end -}}
 {{- $allEnvs = concat $allEnvs $extraEnv -}}
  
