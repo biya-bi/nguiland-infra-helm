@@ -142,17 +142,9 @@ chartPackager:
   script: |
     set -euo pipefail
 
-    # Ensure cleanup happens even if the script exits early due to an error
-    cleanup_src() {
-      echo "Cleaning up source directory..."
-      rm -rf /src/*
-    }
-    trap cleanup_src EXIT
-
     echo "📦 Extracting source code..."
     if [ -f /src/charts.tar.gz ]; then
       tar -xzf /src/charts.tar.gz -C /src
-      rm /src/charts.tar.gz
     else
       echo "ERROR: Source tarball /src/charts.tar.gz not found!"
       exit 1
