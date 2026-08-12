@@ -84,7 +84,7 @@
 {{- $systemName := dig "systemName" nil $values | default (dig "artifactory-common" "systemName" nil $values) | default .Chart.Name -}}
 
 {{- /* Sidecar Configuration */ -}}
-{{- $cleanupPingUrl := dig "cleanup" "pingUrl" nil $values | default (printf "http://localhost:%d/artifactory/api/system/ping" $servicePort) | quote -}}
+{{- $cleanupPingUrl := dig "cleanup" "pingUrl" nil $values | default (printf "http://localhost:%d/artifactory/api/system/ping" (int $servicePort)) | quote -}}
 
 apiVersion: apps/v1
 kind: Deployment
