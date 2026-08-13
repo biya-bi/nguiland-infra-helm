@@ -20,3 +20,5 @@ cleanup:
   # List of additional ConfigMap names (in the same namespace) whose keys
   # will be projected into /run/scripts/cleanup in the cleanup sidecar.
   extraConfigMaps: []
+  # Optional environment variables exposed only to the cleanup sidecar.
+  env: []
