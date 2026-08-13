@@ -198,6 +198,7 @@ spec:
             - mountPath: /var/opt/jfrog/artifactory
               name: {{ include "artifactory-common.fullname" . }}-data
           env:
+            {{- toYaml $allEnvs | nindent 12 }}
             - name: ARTIFACTORY_PING_URL
               value: {{ $cleanupPingUrl }}
       volumes:
