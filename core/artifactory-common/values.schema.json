@@ -127,6 +127,25 @@
       "default": {},
       "description": "Additional environment variables for Artifactory."
     }
+    ,
+    "cleanup": {
+      "type": "object",
+      "description": "Cleanup sidecar configuration.",
+      "properties": {
+        "pingUrl": {
+          "type": "string",
+          "description": "URL used by the cleanup sidecar to ping Artifactory."
+        },
+        "extraConfigMaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional ConfigMap names to project into /run/scripts/cleanup."
+        }
+      }
+    }
   },
   "required": [
     "systemName",

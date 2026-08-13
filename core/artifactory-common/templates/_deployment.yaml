@@ -85,6 +85,7 @@
 
 {{- /* Sidecar Configuration */ -}}
 {{- $cleanupPingUrl := dig "cleanup" "pingUrl" nil $values | default (printf "http://localhost:%d/artifactory/api/system/ping" (int $servicePort)) | quote -}}
+{{- $cleanupExtraConfigMaps := dig "cleanup" "extraConfigMaps" list $values | default (dig "artifactory-common" "cleanup" "extraConfigMaps" list $values) -}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -218,9 +219,17 @@ spec:
             name: {{ include "artifactory-common.fullname" . }}-config
             defaultMode: 0644
         - name: {{ include "artifactory-common.fullname" . }}-cleanup-scripts
-          configMap:
-            name: {{ include "artifactory-common.fullname" . }}-cleanup-scripts
+          projected:
             defaultMode: 0755
+            sources:
+              - configMap:
+                  name: {{ include "artifactory-common.fullname" . }}-cleanup-scripts
+              {{- with $cleanupExtraConfigMaps }}
+              {{- range $configMap := . }}
+              - configMap:
+                  name: {{ $configMap }}
+              {{- end }}
+              {{- end }}
         - name: {{ include "artifactory-common.fullname" . }}-util-scripts
           configMap:
             name: {{ include "artifactory-common.fullname" . }}-util-scripts

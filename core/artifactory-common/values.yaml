@@ -15,3 +15,8 @@ dataChown:
 service:
   port: 8081
   name: artifactoryport
+
+cleanup:
+  # List of additional ConfigMap names (in the same namespace) whose keys
+  # will be projected into /run/scripts/cleanup in the cleanup sidecar.
+  extraConfigMaps: []
