@@ -73,7 +73,7 @@
 {{- $imageRepository := dig "image" "repository" nil $values | default (dig "artifactory-common" "image" "repository" nil $values) -}}
 {{- $imageTag := dig "image" "tag" nil $values | default (dig "artifactory-common" "image" "tag" nil $values) | default .Chart.AppVersion -}}
 {{- $imagePullPolicy := dig "image" "pullPolicy" nil $values | default (dig "artifactory-common" "image" "pullPolicy" nil $values) | default "IfNotPresent" -}}
-{{- $imagePullSecrets := dig "imagePullSecrets" list $values | default (dig "artifactory-common" "imagePullSecrets" list $values) -}}
+{{- $imagePullSecrets := dig "imagePullSecrets" list $values | default (dig "artifactory-common" "imagePullSecrets" list $values) | default (list (dict "name" "docker-config")) -}}
 {{- $commands := dig "commands" nil $values | default (dig "artifactory-common" "commands" nil $values) | default (list "/run/scripts/artifactory/run.sh") -}}
 
 {{- /* Volume and Annotation/Label Configuration */ -}}
@@ -87,6 +87,11 @@
 {{- $cleanupPingUrl := dig "cleanup" "pingUrl" nil $values | default (printf "http://localhost:%d/artifactory/api/system/ping" (int $servicePort)) | quote -}}
 {{- $cleanupExtraConfigMaps := dig "cleanup" "extraConfigMaps" list $values | default (dig "artifactory-common" "cleanup" "extraConfigMaps" list $values) -}}
 {{- $cleanupEnv := dig "cleanup" "env" list $values | default (dig "artifactory-common" "cleanup" "env" list $values) -}}
+{{- $cleanupAllEnvs := concat $cleanupEnv (list (dict "name" "ARTIFACTORY_PING_URL" "value" $cleanupPingUrl)) -}}
+{{- $cleanupImage := dig "cleanup" "image" dict $values | default (dig "artifactory-common" "cleanup" "image" dict $values) | default dict -}}
+{{- $cleanupImageRepository := dig "repository" "" $cleanupImage | default "bash" -}}
+{{- $cleanupImageTag := dig "tag" "" $cleanupImage | default "5.3" -}}
+{{- $cleanupImagePull := dig "pullPolicy" "" $cleanupImage | default "IfNotPresent" -}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -179,7 +184,8 @@ spec:
           env:
             {{- toYaml $allEnvs | nindent 12 }}
         - name: cleanup-sidecar
-          image: bash:5.3
+          image: "{{ printf "%s:%s" $cleanupImageRepository $cleanupImageTag }}"
+          imagePullPolicy: {{ $cleanupImagePull }}
           command:
             - /run/scripts/cleanup/start.sh
           securityContext:
@@ -199,11 +205,7 @@ spec:
             - mountPath: /var/opt/jfrog/artifactory
               name: {{ include "artifactory-common.fullname" . }}-data
           env:
-            {{- if $cleanupEnv }}
-            {{- toYaml $cleanupEnv | nindent 12 }}
-            {{- end }}
-            - name: ARTIFACTORY_PING_URL
-              value: {{ $cleanupPingUrl }}
+            {{- toYaml $cleanupAllEnvs | nindent 12 }}
       volumes:
         - name: {{ include "artifactory-common.fullname" . }}-entrypoint
           configMap:

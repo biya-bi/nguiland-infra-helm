@@ -158,6 +158,17 @@
           "default": [],
           "description": "Environment variables (name/value) exposed only to the cleanup sidecar."
         }
+        ,
+        "image": {
+          "type": "object",
+          "description": "Image configuration for the cleanup sidecar.",
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string", "default": "5.3" },
+            "pullPolicy": { "type": "string", "default": "IfNotPresent" }
+          },
+          "required": ["repository"]
+        }
       }
     }
   },

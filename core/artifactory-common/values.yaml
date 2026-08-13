@@ -7,6 +7,9 @@ image:
   pullPolicy: IfNotPresent
   tag: ""
 
+imagePullSecrets:
+  - name: docker-config
+
 dataChown:
   # Enable the data ownership correction init container.
   # Set to false to disable the chown step when the volume already has correct permissions.
@@ -22,3 +25,8 @@ cleanup:
   extraConfigMaps: []
   # Optional environment variables exposed only to the cleanup sidecar.
   env: []
+  # Image used for the cleanup sidecar. Consumers can override to provide tools like `curl`.
+  image:
+    repository: bash
+    tag: "5.3"
+    pullPolicy: IfNotPresent
