@@ -11,6 +11,9 @@ service:
   name: artossport
 
 cleanup:
+  image:
+    repository: artifactory-jcr.infra/docker-local/org.nguiland.infra/alpine-ops-toolkit
+    tag: "1.0.0"
   extraConfigMaps:
     - artifactory-oss-extra-cleanup-scripts
   env:
