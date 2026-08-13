@@ -16,21 +16,15 @@ cleanup:
     tag: "1.0.0"
   extraConfigMaps:
     - artifactory-oss-extra-cleanup-scripts
+  envMap:
+    ART_OSS_URL: "http://artifactory-oss.infra:8082/artifactory"
+    REPO: "libs-snapshot-local"
+    KEEP: "5"
+    MAX_AGE_HOURS: "6"
+    DRY_RUN: "false"
+    MAX_PARALLEL: "10"
+    RETRIES: "3"
   env:
-    - name: ART_OSS_URL
-      value: "http://artifactory-oss.infra:8082/artifactory"
-    - name: REPO
-      value: "libs-snapshot-local"
-    - name: KEEP
-      value: "5"
-    - name: MAX_AGE_HOURS
-      value: "6"
-    - name: DRY_RUN
-      value: "false"
-    - name: MAX_PARALLEL
-      value: "10"
-    - name: RETRIES
-      value: "3"
     - name: ART_OSS_USER
       valueFrom:
         secretKeyRef:

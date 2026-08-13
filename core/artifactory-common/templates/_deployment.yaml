@@ -86,8 +86,13 @@
 {{- /* Sidecar Configuration */ -}}
 {{- $cleanupPingUrl := dig "cleanup" "pingUrl" nil $values | default (printf "http://localhost:%d/artifactory/api/system/ping" (int $servicePort)) | quote -}}
 {{- $cleanupExtraConfigMaps := dig "cleanup" "extraConfigMaps" list $values | default (dig "artifactory-common" "cleanup" "extraConfigMaps" list $values) -}}
+{{- $cleanupEnvMap := dig "cleanup" "envMap" dict $values | default (dig "artifactory-common" "cleanup" "envMap" dict $values) -}}
+{{- $cleanupEnvFromMap := list -}}
+{{- range $k, $v := $cleanupEnvMap -}}
+  {{- $cleanupEnvFromMap = append $cleanupEnvFromMap (dict "name" $k "value" ($v | toString)) -}}
+{{- end -}}
 {{- $cleanupEnv := dig "cleanup" "env" list $values | default (dig "artifactory-common" "cleanup" "env" list $values) -}}
-{{- $cleanupAllEnvs := concat $cleanupEnv (list (dict "name" "ARTIFACTORY_PING_URL" "value" $cleanupPingUrl)) -}}
+{{- $cleanupAllEnvs := concat $cleanupEnvFromMap $cleanupEnv (list (dict "name" "ARTIFACTORY_PING_URL" "value" $cleanupPingUrl)) -}}
 {{- $cleanupImage := dig "cleanup" "image" dict $values | default (dig "artifactory-common" "cleanup" "image" dict $values) | default dict -}}
 {{- $cleanupImageRepository := dig "repository" "" $cleanupImage | default "bash" -}}
 {{- $cleanupImageTag := dig "tag" "" $cleanupImage | default "5.3" -}}

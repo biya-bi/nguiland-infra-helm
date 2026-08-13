@@ -145,6 +145,12 @@
           "description": "Additional ConfigMap names to project into /run/scripts/cleanup."
         }
         ,
+        "envMap": {
+          "type": "object",
+          "default": {},
+          "description": "Key/value map of environment variables exposed only to the cleanup sidecar."
+        }
+        ,
         "env": {
           "type": "array",
           "items": {
