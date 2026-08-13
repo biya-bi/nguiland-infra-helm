@@ -9,3 +9,33 @@ service:
   port: 8082
   targetPort: 8082
   name: artossport
+
+extraEnv:
+  - name: ART_OSS_URL
+    value: "http://artifactory-oss.infra:8082/artifactory"
+  - name: REPO
+    value: "libs-snapshot-local"
+  - name: KEEP
+    value: "5"
+  - name: MAX_AGE_HOURS
+    value: "6"
+  - name: DRY_RUN
+    value: "false"
+  - name: MAX_PARALLEL
+    value: "10"
+  - name: RETRIES
+    value: "3"
+  - name: ART_OSS_USER
+    valueFrom:
+      secretKeyRef:
+        name: artifactory-oss
+        key: user
+  - name: ART_OSS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: artifactory-oss
+        key: password
+
+cleanup:
+  extraConfigMaps:
+    - artifactory-oss-extra-cleanup-scripts
