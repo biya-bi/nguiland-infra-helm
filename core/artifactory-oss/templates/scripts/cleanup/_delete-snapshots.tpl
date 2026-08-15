@@ -135,7 +135,7 @@ cleanup::oss::snapshots::generate_delete_list() {
         printf("DEBUG [%s] total=%d kept_latest=%d kept_protected=%d kept_by_keep=%d kept_new=%d deleted=%d\n",
           p, total_builds, skipped_latest_build, skipped_protected_build, skipped_by_keep, skipped_new_build, deleted_build) > "/dev/stderr"
       }
-    }' | grep -v '^$' || true | sort -u > delete.txt
+    }' | grep -v '^$' | sort -u > delete.txt || true
 }
 
 cleanup::oss::snapshots::run_query() {
@@ -238,8 +238,13 @@ cleanup::oss::snapshots::perform_deletion() {
   # -----------------------------
   echo "Starting parallel deletion..."
 
-  cat delete.txt | grep -v '^$' | xargs -I {} -P $MAX_PARALLEL sh -c '
+  cat delete.txt | grep -v '^$' | xargs -I {} -P "$MAX_PARALLEL" bash -c '
     file="$1"
+    art_oss_user="$2"
+    art_oss_password="$3"
+    art_oss_url="$4"
+    repo="$5"
+    retries="$6"
 
     # SAFETY: avoid dangerous deletes
     if echo "$file" | grep -q "\.\."; then
@@ -247,11 +252,11 @@ cleanup::oss::snapshots::perform_deletion() {
       exit 0
     fi
 
-    for i in $(seq 1 '"$RETRIES"'); do
+    for i in $(seq 1 "$retries"); do
       echo "Deleting $file (attempt $i)"
       if curl -sf --connect-timeout 10 --max-time 60 \
-        -u "'"$ART_OSS_USER:$ART_OSS_PASSWORD"'" \
-        -X DELETE "'"$ART_OSS_URL/$REPO"'"/$file"; then
+        -u "$art_oss_user:$art_oss_password" \
+        -X DELETE "$art_oss_url/$repo/$file"; then
         echo "Deleted $file"
         exit 0
       fi
@@ -259,7 +264,7 @@ cleanup::oss::snapshots::perform_deletion() {
     done
     echo "FAILED to delete $file" >&2
     exit 1
-  ' _ {}
+  ' _ {} "$ART_OSS_USER" "$ART_OSS_PASSWORD" "$ART_OSS_URL" "$REPO" "$RETRIES"
 
   echo "Cleanup complete."
 }
