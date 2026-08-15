@@ -1,6 +1,0 @@
-dependencies:
-- name: cronjob-common
-  repository: file://../cronjob-common
-  version: 0.1.0
-digest: sha256:7b15ba5e55e2ae887d4d61d59a8d70680db656ed1bd8ee06e3a12e9740b61426
-generated: "2026-05-26T10:26:18.730213-04:00"
