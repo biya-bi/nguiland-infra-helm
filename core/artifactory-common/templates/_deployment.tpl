@@ -48,12 +48,12 @@
 {{- $envMap := dig "envMap" dict $values | default (dig "artifactory-common" "envMap" dict $values) | deepCopy -}}
 {{- $defaultEnvMap := dict "JF_PRODUCT_HOME" "/opt/jfrog/artifactory" "JF_ARTIFACTORY_USER" "artifactory" "JF_ROUTER_ENTRYPOINTS_EXTERNAL_ADDRESS_STRATEGY" "ipv4" "EXTRA_JAVA_OPTS" "-Djava.net.preferIPv4Stack=true" -}}
 {{- $envMap = mergeOverwrite $defaultEnvMap $envMap -}}
-{{- $extraEnv := dig "extraEnv" list $values | default (dig "artifactory-common" "extraEnv" list $values) -}}
+{{- $env := dig "env" list $values | default (dig "artifactory-common" "env" list $values) -}}
 {{- $allEnvs := list -}}
 {{- range $k, $v := $envMap -}}
   {{- $allEnvs = append $allEnvs (dict "name" $k "value" ($v | toString)) -}}
 {{- end -}}
-{{- $allEnvs = concat $allEnvs $extraEnv -}}
+{{- $allEnvs = concat $allEnvs $env -}}
  
 {{- /* Data Chown Configuration */ -}}
 {{- $dataChownConfig := dig "dataChown" nil $values | default (dig "artifactory-common" "dataChown" nil $values) -}}
