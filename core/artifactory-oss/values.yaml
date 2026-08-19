@@ -17,7 +17,7 @@ cleanup:
   extraConfigMaps:
     - artifactory-oss-extra-cleanup-scripts
   envMap:
-    ART_OSS_URL: "http://artifactory-oss.infra:8082/artifactory"
+    ART_OSS_URL: "http://localhost:8082/artifactory"
     REPO: "libs-snapshot-local"
     KEEP: "5"
     MAX_AGE_HOURS: "6"
