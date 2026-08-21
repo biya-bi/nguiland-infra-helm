@@ -294,7 +294,7 @@ cleanup::oss::snapshots::perform_deletion() {
     return "$NO_OP_STATUS"
   fi
 
-  logger::log_info "---- DEBUG: files selected for deletion ----"; 
+  logger::log_debug "---- Files selected for deletion ----"; 
   cat "$delete_file"
   logger::log_info "--------------------------------------------"
 
