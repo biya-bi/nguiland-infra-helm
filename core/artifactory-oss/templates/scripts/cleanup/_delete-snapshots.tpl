@@ -367,7 +367,7 @@ cleanup::oss::snapshots::main() {
   working_dir=$(cleanup::oss::snapshots::create_working_dir)
   cleanup::oss::snapshots::handle_result "$?"
 
-  trap 'rm -rf "$working_dir"' EXIT
+  trap "rm -rf '$working_dir'" EXIT
 
   logger::info "Created directory: $working_dir"
 
