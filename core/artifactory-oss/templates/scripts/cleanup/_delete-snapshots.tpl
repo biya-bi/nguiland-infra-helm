@@ -8,14 +8,29 @@ readonly UTIL_DIR="$(cd "${SCRIPTS_DIR}/../util" && pwd)"
 
 source "${UTIL_DIR}/logger.sh"
 
+cleanup::oss::snapshots::create_working_dir() {
+  local working_dir
+  working_dir="$(mktemp -d -t artifactory-oss-cleanup.XXXXXX)" || {
+    logger::log_error "Failed to create temporary working directory"
+    return 1
+  }
+  echo "$working_dir"
+}
+
 cleanup::oss::snapshots::generate_delete_list() {
-  local cutoff_epoch="$1"
-  local debug_file="oss-cleanup-snapshots-debug.txt"
+  local working_dir="$1"
+  local cutoff_epoch="$2"
+
+  local offenders_file="${working_dir}/offenders.txt"
+  local result_file="${working_dir}/result.json"
+  local debug_file="${working_dir}/debug.txt"
+  local protected_builds_file="${working_dir}/protected_builds.txt"
+  local delete_file="${working_dir}/delete.txt"
 
   : > "$debug_file"
 
   # produce delete.txt from result.json and protected_builds.txt
-  jq -r --rawfile offenders offenders.txt '
+  jq -r --rawfile offenders "$offenders_file" '
     .results[]
     | select(.name != null and .name != "" and .name != "maven-metadata.xml")
     | select(.path as $p | ($offenders | split("\n") | map(select(length > 0)) | index($p)))
@@ -24,10 +39,10 @@ cleanup::oss::snapshots::generate_delete_list() {
         catch 0
       )
     | "\(.path)|\(.name)|\(.created_epoch)"
-  ' result.json |
+  ' "$result_file" |
     gawk -v debug_file="$debug_file" \
          -F'|' \
-         -v protected_file="protected_builds.txt" \
+         -v protected_file="$protected_builds_file" \
          -v cutoff_epoch="$cutoff_epoch" \
          -v keep="$KEEP" '
     function load_protected() {
@@ -148,7 +163,7 @@ cleanup::oss::snapshots::generate_delete_list() {
         printf("[%s] total=%d kept_latest=%d kept_protected=%d kept_by_keep=%d kept_new=%d deleted=%d\n",
           p, total_builds, skipped_latest_build, skipped_protected_build, skipped_by_keep, skipped_new_build, deleted_build) >> debug_file
       }
-    }' | grep -v '^$' | sort -u > delete.txt || true
+    }' | grep -v '^$' | sort -u > "$delete_file" || true
 
   while IFS= read -r line; do
     logger::log_debug "$line"
@@ -156,6 +171,8 @@ cleanup::oss::snapshots::generate_delete_list() {
 }
 
 cleanup::oss::snapshots::run_query() {
+  local working_dir="$1"
+
   local query
   query=$(cat <<EOF
 items.find({
@@ -165,33 +182,40 @@ items.find({
 EOF
   )
 
+  local result_file="${working_dir}/result.json"
+
   logger::log_info "Running AQL query..."
   curl -sS --fail --connect-timeout 10 --max-time 60 \
     -u "$ART_OSS_USER:$ART_OSS_PASSWORD" \
     -X POST "$ART_OSS_URL/api/search/aql" \
     -H "Content-Type: text/plain" \
-    -d "$query" > result.json || {
+    -d "$query" > "$result_file" || {
       logger::log_error "curl failed while executing AQL query"
       exit 1
     }
 }
 
 cleanup::oss::snapshots::validate_response() {
+  local working_dir="$1"
+
+  local result_file="${working_dir}/result.json"
+  local tmp_file="${working_dir}/tmp.json"
+
   logger::log_info "---- RAW RESPONSE (first 20 lines) ----"
-  head -n 20 result.json
+  head -n 20 "$result_file"
   logger::log_info "---------------------------------------"
-  if ! jq empty result.json >/dev/null 2>&1; then 
+  if ! jq empty "$result_file" >/dev/null 2>&1; then 
     logger::log_error "Artifactory did not return valid JSON";
     exit 1;
   fi
-  if jq -e '.errors' result.json > /dev/null; then
+  if jq -e '.errors' "$result_file" > /dev/null; then
     logger::log_error "Artifactory returned errors";
-    jq . result.json;
+    jq . "$result_file";
     exit 1;
   fi
-  jq 'if (.results == null or (.results | type != "array")) then .results = [] else . end' result.json > tmp.json && mv tmp.json result.json
+  jq 'if (.results == null or (.results | type != "array")) then .results = [] else . end' "$result_file" > "$tmp_file" && mv "$tmp_file" "$result_file"
   local total
-  total=$(jq '.results | length' result.json)
+  total=$(jq '.results | length' "$result_file")
   logger::log_info "Total artifacts returned: $total"
   if [ "$total" -eq 0 ]; then 
     logger::log_info "No artifacts found";
@@ -200,43 +224,58 @@ cleanup::oss::snapshots::validate_response() {
 }
 
 cleanup::oss::snapshots::get_offenders() {
-  jq -r '.results[] | select(.name != null and .name != "" and .name != "maven-metadata.xml") | .path' result.json | sort -u > offenders.txt
+  local working_dir="$1"
+
+  local result_file="${working_dir}/result.json"
+  local offenders_file="${working_dir}/offenders.txt"
+
+  jq -r '.results[] | select(.name != null and .name != "" and .name != "maven-metadata.xml") | .path' "$result_file" | sort -u > "$offenders_file"
   local offender_count
-  offender_count=$(grep -c . offenders.txt || true)
+  offender_count=$(grep -c . "$offenders_file" || true)
   logger::log_info "Artifacts requiring cleanup: $offender_count"
   if [ "$offender_count" -eq 0 ]; then
     logger::log_info "No cleanup required";
     exit 0;
   fi
   logger::log_info "---- DEBUG: offender paths ----";
-  cat offenders.txt;
+  cat "$offenders_file";
   logger::log_info "--------------------------------"
 }
 
 cleanup::oss::snapshots::fetch_protected_builds() {
+  local working_dir="$1"
+
+  local offenders_file="${working_dir}/offenders.txt"
+  local metadata_file="${working_dir}/metadata.xml"
+  local protected_builds_file="${working_dir}/protected_builds.txt"
+
   logger::log_info "Fetching maven-metadata.xml to protect active builds..."
   local meta_url
-  > protected_builds.txt
+  > "$protected_builds_file"
   while read -r path; do
     meta_url="$ART_OSS_URL/$REPO/$path/maven-metadata.xml"
-    if curl -sf --connect-timeout 5 --max-time 10 -u "$ART_OSS_USER:$ART_OSS_PASSWORD" "$meta_url" -o meta.xml; then
+    if curl -sf --connect-timeout 5 --max-time 10 -u "$ART_OSS_USER:$ART_OSS_PASSWORD" "$meta_url" -o "$metadata_file"; then
       local build
-      build=$(grep -oE '[0-9]{8}\.[0-9]{6}-[0-9]+' meta.xml | head -n 1 || true)
+      build=$(grep -oE '[0-9]{8}\.[0-9]{6}-[0-9]+' "$metadata_file" | head -n 1 || true)
       if [ -n "$build" ]; then
-        echo "$path|$build" >> protected_builds.txt;
+        echo "$path|$build" >> "$protected_builds_file";
       fi
     fi
-  done < offenders.txt
+  done < "$offenders_file"
   logger::log_info "---- Protected builds (from metadata) ----";
-  cat protected_builds.txt || true; 
+  cat "$protected_builds_file" || true; 
   logger::log_info "------------------------------------------"
 }
 
 cleanup::oss::snapshots::perform_deletion() {
-  local cutoff_epoch="$1"
-  cleanup::oss::snapshots::generate_delete_list "$cutoff_epoch"
+  local working_dir="$1"
+  local cutoff_epoch="$2"
+
+  local delete_file="${working_dir}/delete.txt"
+
+  cleanup::oss::snapshots::generate_delete_list "$working_dir" "$cutoff_epoch"
   local delete_count
-  delete_count=$(grep -c . delete.txt || true)
+  delete_count=$(grep -c . "$delete_file" || true)
   logger::log_info "Files to delete: $delete_count"
 
   if [ "$delete_count" -eq 0 ]; then
@@ -245,7 +284,7 @@ cleanup::oss::snapshots::perform_deletion() {
   fi
 
   logger::log_info "---- DEBUG: files selected for deletion ----"; 
-  cat delete.txt
+  cat "$delete_file"
   logger::log_info "--------------------------------------------"
 
   if [ "$DRY_RUN" = "true" ]; then
@@ -258,7 +297,7 @@ cleanup::oss::snapshots::perform_deletion() {
   # -----------------------------
   logger::log_info "Starting parallel deletion..."
 
-  if ! grep -v '^$' delete.txt | xargs -I {} -P "$MAX_PARALLEL" bash -c '
+  if ! grep -v '^$' "$delete_file" | xargs -I {} -P "$MAX_PARALLEL" bash -c '
     util_dir="$1"
     file="$2"
     art_oss_user="$3"
@@ -303,8 +342,12 @@ cleanup::oss::snapshots::get_cutoff_epoch() {
 }
 
 cleanup::oss::snapshots::main() {
-  # Ensure we are in a writable directory
-  cd /tmp
+  local working_dir
+  working_dir=$(cleanup::oss::snapshots::create_working_dir) || exit 1
+
+  trap 'rm -rf "$working_dir"' EXIT
+
+  logger::log_info "Created directory: $working_dir"
 
   logger::log_info "=== Artifactory Snapshot Cleanup ==="
   logger::log_info "Dry run: $DRY_RUN"
@@ -312,11 +355,11 @@ cleanup::oss::snapshots::main() {
   local cutoff_epoch
   cutoff_epoch=$(cleanup::oss::snapshots::get_cutoff_epoch)
 
-  cleanup::oss::snapshots::run_query
-  cleanup::oss::snapshots::validate_response
-  cleanup::oss::snapshots::get_offenders
-  cleanup::oss::snapshots::fetch_protected_builds
-  cleanup::oss::snapshots::perform_deletion "$cutoff_epoch"
+  cleanup::oss::snapshots::run_query "$working_dir"
+  cleanup::oss::snapshots::validate_response "$working_dir"
+  cleanup::oss::snapshots::get_offenders "$working_dir"
+  cleanup::oss::snapshots::fetch_protected_builds "$working_dir"
+  cleanup::oss::snapshots::perform_deletion "$working_dir" "$cutoff_epoch"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
