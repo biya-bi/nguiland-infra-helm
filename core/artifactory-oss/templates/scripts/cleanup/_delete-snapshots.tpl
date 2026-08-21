@@ -30,140 +30,142 @@ cleanup::oss::snapshots::generate_delete_list() {
   : > "$debug_file"
 
   # produce delete.txt from result.json and protected_builds.txt
-  jq -r --rawfile offenders "$offenders_file" '
-    .results[]
-    | select(.name != null and .name != "" and .name != "maven-metadata.xml")
-    | select(.path as $p | ($offenders | split("\n") | map(select(length > 0)) | index($p)))
-    | .created_epoch = (
-        try (.created | split(".")[0] + "Z" | fromdateiso8601)
-        catch 0
-      )
-    | "\(.path)|\(.name)|\(.created_epoch)"
-  ' "$result_file" |
-    gawk -v debug_file="$debug_file" \
-         -F'|' \
-         -v protected_file="$protected_builds_file" \
-         -v cutoff_epoch="$cutoff_epoch" \
-         -v keep="$KEEP" '
-    function load_protected() {
-      while ((getline line < protected_file) > 0) {
-        split(line, parts, "|")
-        protected[parts[1] "|" parts[2]] = 1
-      }
-    }
-
-    function is_protected(key) {
-      return (key in protected)
-    }
-
-    function extract_build(name) {
-      if (name == "" || name == "null") return "UNKNOWN"
-      if (match(name, /[0-9]{8}\.[0-9]{6}-[0-9]+/)) {
-        return substr(name, RSTART, RLENGTH)
-      }
-      return "UNKNOWN"
-    }
-
-    BEGIN { 
-     load_protected()
-    }
-
-    {
-      path=$1
-      name=$2
-      epoch=$3
-
-      # SAFETY: skip empty or invalid name
-      if (name == "" || name == "null") next
-
-      # SAFETY: skip invalid timestamps
-      if (epoch == 0) next
-
-      build=extract_build(name)
-
-      # SAFETY: skip malformed builds
-      if (build == "UNKNOWN") next
-
-      key=path "|" build
-
-      if (!(key in seen)) {
-        seen[key]=1
-        build_count[path]++
-        build_order[path, build_count[path]] = build
+  if ! jq -r --rawfile offenders "$offenders_file" '
+      .results[]
+      | select(.name != null and .name != "" and .name != "maven-metadata.xml")
+      | select(.path as $p | ($offenders | split("\n") | map(select(length > 0)) | index($p)))
+      | .created_epoch = (
+          try (.created | split(".")[0] + "Z" | fromdateiso8601)
+          catch 0
+        )
+      | "\(.path)|\(.name)|\(.created_epoch)"
+    ' "$result_file" |
+      gawk -v debug_file="$debug_file" \
+          -F'|' \
+          -v protected_file="$protected_builds_file" \
+          -v cutoff_epoch="$cutoff_epoch" \
+          -v keep="$KEEP" '
+      function load_protected() {
+        while ((getline line < protected_file) > 0) {
+          split(line, parts, "|")
+          protected[parts[1] "|" parts[2]] = 1
+        }
       }
 
-      file_count[key]++
-      files[key] = files[key] "\n" path "/" name
-
-      if (epoch > build_time[key]) {
-        build_time[key] = epoch
+      function is_protected(key) {
+        return (key in protected)
       }
-    }
 
-    END {
-      for (p in build_count) {
+      function extract_build(name) {
+        if (name == "" || name == "null") return "UNKNOWN"
+        if (match(name, /[0-9]{8}\.[0-9]{6}-[0-9]+/)) {
+          return substr(name, RSTART, RLENGTH)
+        }
+        return "UNKNOWN"
+      }
 
-        # sort builds by recency
-        for (i=1; i<=build_count[p]; i++) {
-          for (j=i+1; j<=build_count[p]; j++) {
-            b1=build_order[p,i]
-            b2=build_order[p,j]
+      BEGIN { 
+      load_protected()
+      }
 
-            if (build_time[p "|" b2] > build_time[p "|" b1]) {
-              tmp=build_order[p,i]
-              build_order[p,i]=build_order[p,j]
-              build_order[p,j]=tmp
-            }
-          }
+      {
+        path=$1
+        name=$2
+        epoch=$3
+
+        # SAFETY: skip empty or invalid name
+        if (name == "" || name == "null") next
+
+        # SAFETY: skip invalid timestamps
+        if (epoch == 0) next
+
+        build=extract_build(name)
+
+        # SAFETY: skip malformed builds
+        if (build == "UNKNOWN") next
+
+        key=path "|" build
+
+        if (!(key in seen)) {
+          seen[key]=1
+          build_count[path]++
+          build_order[path, build_count[path]] = build
         }
 
-        # --- DEBUG counters ---
-        total_builds = build_count[p]
-        skipped_latest_build = 0
-        skipped_protected_build = 0
-        skipped_by_keep = 0
-        skipped_new_build = 0
-        deleted_build = 0
+        file_count[key]++
+        files[key] = files[key] "\n" path "/" name
 
-        # Standard case: more builds than keep
-        if (build_count[p] > keep) {
+        if (epoch > build_time[key]) {
+          build_time[key] = epoch
+        }
+      }
+
+      END {
+        for (p in build_count) {
+
+          # sort builds by recency
           for (i=1; i<=build_count[p]; i++) {
-            build=build_order[p,i]
-            key=p "|" build
+            for (j=i+1; j<=build_count[p]; j++) {
+              b1=build_order[p,i]
+              b2=build_order[p,j]
 
-            if (i == 1) { skipped_latest_build++; continue } # NEVER delete latest build
-            if (is_protected(key)) { skipped_protected_build++; continue } # NEVER delete metadata build
-            if (i <= keep) { skipped_by_keep++; continue }
-
-            # SAFETY: respect age threshold
-            if (build_time[key] > cutoff_epoch) { skipped_new_build++; continue }
-
-            deleted_build++
-            print files[key]
+              if (build_time[p "|" b2] > build_time[p "|" b1]) {
+                tmp=build_order[p,i]
+                build_order[p,i]=build_order[p,j]
+                build_order[p,j]=tmp
+              }
+            }
           }
-        } else {
-          for (i=1; i<=build_count[p]; i++) {
-            build=build_order[p,i]
-            key=p "|" build
 
-            if (i == 1) { skipped_latest_build++; continue } # NEVER delete latest build
-            if (is_protected(key)) { skipped_protected_build++; continue } # NEVER delete metadata build
+          # --- DEBUG counters ---
+          total_builds = build_count[p]
+          skipped_latest_build = 0
+          skipped_protected_build = 0
+          skipped_by_keep = 0
+          skipped_new_build = 0
+          deleted_build = 0
 
-            # SAFETY: delete ONLY if older than threshold
-            if (build_time[key] <= cutoff_epoch) {
+          # Standard case: more builds than keep
+          if (build_count[p] > keep) {
+            for (i=1; i<=build_count[p]; i++) {
+              build=build_order[p,i]
+              key=p "|" build
+
+              if (i == 1) { skipped_latest_build++; continue } # NEVER delete latest build
+              if (is_protected(key)) { skipped_protected_build++; continue } # NEVER delete metadata build
+              if (i <= keep) { skipped_by_keep++; continue }
+
+              # SAFETY: respect age threshold
+              if (build_time[key] > cutoff_epoch) { skipped_new_build++; continue }
+
               deleted_build++
               print files[key]
-            } else {
-              skipped_new_build++
+            }
+          } else {
+            for (i=1; i<=build_count[p]; i++) {
+              build=build_order[p,i]
+              key=p "|" build
+
+              if (i == 1) { skipped_latest_build++; continue } # NEVER delete latest build
+              if (is_protected(key)) { skipped_protected_build++; continue } # NEVER delete metadata build
+
+              # SAFETY: delete ONLY if older than threshold
+              if (build_time[key] <= cutoff_epoch) {
+                deleted_build++
+                print files[key]
+              } else {
+                skipped_new_build++
+              }
             }
           }
-        }
 
-        # --- DEBUG output per artifact ---
-        printf("[%s] total=%d kept_latest=%d kept_protected=%d kept_by_keep=%d kept_new=%d deleted=%d\n",
-          p, total_builds, skipped_latest_build, skipped_protected_build, skipped_by_keep, skipped_new_build, deleted_build) >> debug_file
-      }
-    }' | grep -v '^$' | sort -u > "$delete_file" || true
+          # --- DEBUG output per artifact ---
+          printf("[%s] total=%d kept_latest=%d kept_protected=%d kept_by_keep=%d kept_new=%d deleted=%d\n",
+            p, total_builds, skipped_latest_build, skipped_protected_build, skipped_by_keep, skipped_new_build, deleted_build) >> debug_file
+        }
+      }' | grep -v '^$' | sort -u > "$delete_file"; then
+    return 1
+  fi
 
   while IFS= read -r line; do
     logger::log_debug "$line"
@@ -273,7 +275,11 @@ cleanup::oss::snapshots::perform_deletion() {
 
   local delete_file="${working_dir}/delete.txt"
 
-  cleanup::oss::snapshots::generate_delete_list "$working_dir" "$cutoff_epoch"
+  if ! cleanup::oss::snapshots::generate_delete_list "$working_dir" "$cutoff_epoch"; then
+    logger::log_error "Failed to generate delete list"
+    return 1
+  fi
+
   local delete_count
   delete_count=$(grep -c . "$delete_file" || true)
   logger::log_info "Files to delete: $delete_count"
@@ -359,7 +365,7 @@ cleanup::oss::snapshots::main() {
   cleanup::oss::snapshots::validate_response "$working_dir"
   cleanup::oss::snapshots::get_offenders "$working_dir"
   cleanup::oss::snapshots::fetch_protected_builds "$working_dir"
-  cleanup::oss::snapshots::perform_deletion "$working_dir" "$cutoff_epoch"
+  cleanup::oss::snapshots::perform_deletion "$working_dir" "$cutoff_epoch" || exit 1
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
