@@ -10,6 +10,10 @@ source "${UTIL_DIR}/logger.sh"
 
 cleanup::oss::snapshots::generate_delete_list() {
   local cutoff_epoch="$1"
+  local debug_file="oss-cleanup-snapshots-debug.txt"
+
+  : > "$debug_file"
+
   # produce delete.txt from result.json and protected_builds.txt
   jq -r --rawfile offenders offenders.txt '
     .results[]
@@ -21,7 +25,11 @@ cleanup::oss::snapshots::generate_delete_list() {
       )
     | "\(.path)|\(.name)|\(.created_epoch)"
   ' result.json |
-    gawk -F'|' -v protected_file="protected_builds.txt" -v cutoff_epoch="$cutoff_epoch" -v keep="$KEEP" '
+    gawk -v debug_file="$debug_file" \
+         -F'|' \
+         -v protected_file="protected_builds.txt" \
+         -v cutoff_epoch="$cutoff_epoch" \
+         -v keep="$KEEP" '
     function load_protected() {
       while ((getline line < protected_file) > 0) {
         split(line, parts, "|")
@@ -137,10 +145,14 @@ cleanup::oss::snapshots::generate_delete_list() {
         }
 
         # --- DEBUG output per artifact ---
-        printf("DEBUG [%s] total=%d kept_latest=%d kept_protected=%d kept_by_keep=%d kept_new=%d deleted=%d\n",
-          p, total_builds, skipped_latest_build, skipped_protected_build, skipped_by_keep, skipped_new_build, deleted_build) > "/dev/stderr"
+        printf("[%s] total=%d kept_latest=%d kept_protected=%d kept_by_keep=%d kept_new=%d deleted=%d\n",
+          p, total_builds, skipped_latest_build, skipped_protected_build, skipped_by_keep, skipped_new_build, deleted_build) >> debug_file
       }
     }' | grep -v '^$' | sort -u > delete.txt || true
+
+  while IFS= read -r line; do
+    logger::log_debug "$line"
+  done < "$debug_file"
 }
 
 cleanup::oss::snapshots::run_query() {
