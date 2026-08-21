@@ -6,6 +6,8 @@ set -uo pipefail
 readonly SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly UTIL_DIR="$(cd "${SCRIPTS_DIR}/../util" && pwd)"
 
+readonly NO_OP_STATUS=2
+
 source "${UTIL_DIR}/logger.sh"
 
 cleanup::oss::snapshots::create_working_dir() {
@@ -163,7 +165,7 @@ cleanup::oss::snapshots::generate_delete_list() {
           printf("[%s] total=%d kept_latest=%d kept_protected=%d kept_by_keep=%d kept_new=%d deleted=%d\n",
             p, total_builds, skipped_latest_build, skipped_protected_build, skipped_by_keep, skipped_new_build, deleted_build) >> debug_file
         }
-      }' | grep -v '^$' | sort -u > "$delete_file"; then
+      }' | awk 'NF' | sort -u > "$delete_file"; then
     return 1
   fi
 
@@ -193,7 +195,7 @@ EOF
     -H "Content-Type: text/plain" \
     -d "$query" > "$result_file" || {
       logger::log_error "curl failed while executing AQL query"
-      exit 1
+      return 1
     }
 }
 
@@ -208,20 +210,25 @@ cleanup::oss::snapshots::validate_response() {
   logger::log_info "---------------------------------------"
   if ! jq empty "$result_file" >/dev/null 2>&1; then 
     logger::log_error "Artifactory did not return valid JSON";
-    exit 1;
+    return 1;
   fi
   if jq -e '.errors' "$result_file" > /dev/null; then
     logger::log_error "Artifactory returned errors";
     jq . "$result_file";
-    exit 1;
+    return 1;
   fi
-  jq 'if (.results == null or (.results | type != "array")) then .results = [] else . end' "$result_file" > "$tmp_file" && mv "$tmp_file" "$result_file"
+  if ! jq 'if (.results == null or (.results | type != "array")) then .results = [] else . end' \
+     "$result_file" > "$tmp_file" ||
+     ! mv "$tmp_file" "$result_file"; then
+    logger::log_error "Failed to normalize Artifactory response"
+    return 1
+  fi
   local total
   total=$(jq '.results | length' "$result_file")
   logger::log_info "Total artifacts returned: $total"
   if [ "$total" -eq 0 ]; then 
     logger::log_info "No artifacts found";
-    exit 0;
+    return "$NO_OP_STATUS";
   fi
 }
 
@@ -237,7 +244,7 @@ cleanup::oss::snapshots::get_offenders() {
   logger::log_info "Artifacts requiring cleanup: $offender_count"
   if [ "$offender_count" -eq 0 ]; then
     logger::log_info "No cleanup required";
-    exit 0;
+    return "$NO_OP_STATUS";
   fi
   logger::log_info "---- DEBUG: offender paths ----";
   cat "$offenders_file";
@@ -286,7 +293,7 @@ cleanup::oss::snapshots::perform_deletion() {
 
   if [ "$delete_count" -eq 0 ]; then
     logger::log_info "Nothing to delete"
-    exit 0
+    return "$NO_OP_STATUS"
   fi
 
   logger::log_info "---- DEBUG: files selected for deletion ----"; 
@@ -295,7 +302,7 @@ cleanup::oss::snapshots::perform_deletion() {
 
   if [ "$DRY_RUN" = "true" ]; then
     logger::log_info "[DRY RUN] Skipping deletion"
-    exit 0
+    return "$NO_OP_STATUS"
   fi
 
   # -----------------------------
@@ -347,9 +354,20 @@ cleanup::oss::snapshots::get_cutoff_epoch() {
   echo $((now_epoch - max_age * 3600))
 }
 
+cleanup::oss::snapshots::handle_result() {
+  local status="$1"
+
+  case "$status" in
+    0) ;;
+    "$NO_OP_STATUS") exit 0 ;;
+    *) exit "$status" ;;
+  esac
+}
+
 cleanup::oss::snapshots::main() {
   local working_dir
-  working_dir=$(cleanup::oss::snapshots::create_working_dir) || exit 1
+  working_dir=$(cleanup::oss::snapshots::create_working_dir)
+  cleanup::oss::snapshots::handle_result "$?"
 
   trap 'rm -rf "$working_dir"' EXIT
 
@@ -360,12 +378,22 @@ cleanup::oss::snapshots::main() {
 
   local cutoff_epoch
   cutoff_epoch=$(cleanup::oss::snapshots::get_cutoff_epoch)
+  cleanup::oss::snapshots::handle_result "$?"
 
   cleanup::oss::snapshots::run_query "$working_dir"
+  cleanup::oss::snapshots::handle_result "$?"
+
   cleanup::oss::snapshots::validate_response "$working_dir"
+  cleanup::oss::snapshots::handle_result "$?"
+
   cleanup::oss::snapshots::get_offenders "$working_dir"
+  cleanup::oss::snapshots::handle_result "$?"
+
   cleanup::oss::snapshots::fetch_protected_builds "$working_dir"
-  cleanup::oss::snapshots::perform_deletion "$working_dir" "$cutoff_epoch" || exit 1
+  cleanup::oss::snapshots::handle_result "$?"
+
+  cleanup::oss::snapshots::perform_deletion "$working_dir" "$cutoff_epoch"
+  cleanup::oss::snapshots::handle_result "$?"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
