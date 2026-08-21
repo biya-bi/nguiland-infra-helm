@@ -13,7 +13,7 @@ source "${UTIL_DIR}/logger.sh"
 cleanup::oss::snapshots::create_working_dir() {
   local working_dir
   working_dir="$(mktemp -d -t artifactory-oss-cleanup.XXXXXX)" || {
-    logger::log_error "Failed to create temporary working directory"
+    logger::error "Failed to create temporary working directory"
     return 1
   }
   echo "$working_dir"
@@ -170,7 +170,7 @@ cleanup::oss::snapshots::generate_delete_list() {
   fi
 
   while IFS= read -r line; do
-    logger::log_debug "$line"
+    logger::debug "$line"
   done < "$debug_file"
 }
 
@@ -188,13 +188,13 @@ EOF
 
   local result_file="${working_dir}/result.json"
 
-  logger::log_info "Running AQL query..."
+  logger::info "Running AQL query..."
   curl -sS --fail --connect-timeout 10 --max-time 60 \
     -u "$ART_OSS_USER:$ART_OSS_PASSWORD" \
     -X POST "$ART_OSS_URL/api/search/aql" \
     -H "Content-Type: text/plain" \
     -d "$query" > "$result_file" || {
-      logger::log_error "curl failed while executing AQL query"
+      logger::error "curl failed while executing AQL query"
       return 1
     }
 }
@@ -205,27 +205,27 @@ cleanup::oss::snapshots::validate_response() {
   local result_file="${working_dir}/result.json"
   local tmp_file="${working_dir}/tmp.json"
 
-  logger::log_info "---- RAW RESPONSE (first 20 lines) ----"
+  logger::info "---- RAW RESPONSE (first 20 lines) ----"
   head -n 20 "$result_file"
-  logger::log_info "---------------------------------------"
+  logger::info "---------------------------------------"
   if ! jq empty "$result_file" >/dev/null 2>&1; then 
-    logger::log_error "Artifactory did not return valid JSON";
+    logger::error "Artifactory did not return valid JSON";
     return 1;
   fi
   if jq -e '.errors' "$result_file" > /dev/null; then
-    logger::log_error "Artifactory returned errors";
+    logger::error "Artifactory returned errors";
     jq . "$result_file";
     return 1;
   fi
   if ! jq 'if (.results == null or (.results | type != "array")) then .results = [] else . end' \
      "$result_file" > "$tmp_file" ||
      ! mv "$tmp_file" "$result_file"; then
-    logger::log_error "Failed to normalize Artifactory response"
+    logger::error "Failed to normalize Artifactory response"
     return 1
   fi
   local total
   total=$(jq '.results | length' "$result_file")
-  logger::log_info "Total artifacts returned: $total"
+  logger::info "Total artifacts returned: $total"
   if [ "$total" -eq 0 ]; then 
     return "$NO_OP_STATUS";
   fi
@@ -240,14 +240,14 @@ cleanup::oss::snapshots::get_offenders() {
   jq -r '.results[] | select(.name != null and .name != "" and .name != "maven-metadata.xml") | .path' "$result_file" | sort -u > "$offenders_file"
   local offender_count
   offender_count=$(grep -c . "$offenders_file" || true)
-  logger::log_info "Artifacts requiring cleanup: $offender_count"
+  logger::info "Artifacts requiring cleanup: $offender_count"
   if [ "$offender_count" -eq 0 ]; then
-    logger::log_info "No cleanup required";
+    logger::info "No cleanup required";
     return "$NO_OP_STATUS";
   fi
-  logger::log_info "---- DEBUG: offender paths ----";
+  logger::info "---- DEBUG: offender paths ----";
   cat "$offenders_file";
-  logger::log_info "--------------------------------"
+  logger::info "--------------------------------"
 }
 
 cleanup::oss::snapshots::fetch_protected_builds() {
@@ -257,7 +257,7 @@ cleanup::oss::snapshots::fetch_protected_builds() {
   local metadata_file="${working_dir}/metadata.xml"
   local protected_builds_file="${working_dir}/protected_builds.txt"
 
-  logger::log_info "Fetching maven-metadata.xml to protect active builds..."
+  logger::info "Fetching maven-metadata.xml to protect active builds..."
   local meta_url
   > "$protected_builds_file"
   while read -r path; do
@@ -270,9 +270,9 @@ cleanup::oss::snapshots::fetch_protected_builds() {
       fi
     fi
   done < "$offenders_file"
-  logger::log_info "---- Protected builds (from metadata) ----";
+  logger::info "---- Protected builds (from metadata) ----";
   cat "$protected_builds_file" || true; 
-  logger::log_info "------------------------------------------"
+  logger::info "------------------------------------------"
 }
 
 cleanup::oss::snapshots::perform_deletion() {
@@ -282,31 +282,31 @@ cleanup::oss::snapshots::perform_deletion() {
   local delete_file="${working_dir}/delete.txt"
 
   if ! cleanup::oss::snapshots::generate_delete_list "$working_dir" "$cutoff_epoch"; then
-    logger::log_error "Failed to generate delete list"
+    logger::error "Failed to generate delete list"
     return 1
   fi
 
   local delete_count
   delete_count=$(grep -c . "$delete_file" || true)
-  logger::log_info "Files to delete: $delete_count"
+  logger::info "Files to delete: $delete_count"
 
   if [ "$delete_count" -eq 0 ]; then
     return "$NO_OP_STATUS"
   fi
 
-  logger::log_debug "---- Files selected for deletion ----"; 
+  logger::debug "---- Files selected for deletion ----"; 
   cat "$delete_file"
-  logger::log_info "--------------------------------------------"
+  logger::info "--------------------------------------------"
 
   if [ "$DRY_RUN" = "true" ]; then
-    logger::log_info "[DRY RUN] Skipping deletion"
+    logger::info "[DRY RUN] Skipping deletion"
     return "$NO_OP_STATUS"
   fi
 
   # -----------------------------
   # Parallel deletion with retry
   # -----------------------------
-  logger::log_info "Starting parallel deletion..."
+  logger::info "Starting parallel deletion..."
 
   if ! grep -v '^$' "$delete_file" | xargs -I {} -P "$MAX_PARALLEL" bash -c '
     util_dir="$1"
@@ -321,28 +321,28 @@ cleanup::oss::snapshots::perform_deletion() {
 
     # SAFETY: avoid dangerous deletes
     if echo "$file" | grep -q "\.\."; then
-      logger::log_info "Skipping suspicious path: $file"
+      logger::info "Skipping suspicious path: $file"
       exit 0
     fi
 
     for i in $(seq 1 "$retries"); do
-      logger::log_info "Deleting $file (attempt $i)"
+      logger::info "Deleting $file (attempt $i)"
       if curl -sf --connect-timeout 10 --max-time 60 \
         -u "$art_oss_user:$art_oss_password" \
         -X DELETE "$art_oss_url/$repo/$file"; then
-        logger::log_info "Deleted $file"
+        logger::info "Deleted $file"
         exit 0
       fi
       sleep $((i * 2))
     done
-    logger::log_error "Failed to delete $file"
+    logger::error "Failed to delete $file"
     exit 1
   ' _ "$UTIL_DIR" {} "$ART_OSS_USER" "$ART_OSS_PASSWORD" "$ART_OSS_URL" "$REPO" "$RETRIES"; then
-    logger::log_error "Failed to delete one or more files"
+    logger::error "Failed to delete one or more files"
     exit 1
   fi
 
-  logger::log_info "Cleanup complete"
+  logger::info "Cleanup complete"
 }
 
 cleanup::oss::snapshots::get_cutoff_epoch() {
@@ -369,10 +369,10 @@ cleanup::oss::snapshots::main() {
 
   trap 'rm -rf "$working_dir"' EXIT
 
-  logger::log_info "Created directory: $working_dir"
+  logger::info "Created directory: $working_dir"
 
-  logger::log_info "=== Artifactory Snapshot Cleanup ==="
-  logger::log_info "Dry run: $DRY_RUN"
+  logger::info "=== Artifactory Snapshot Cleanup ==="
+  logger::info "Dry run: $DRY_RUN"
 
   local cutoff_epoch
   cutoff_epoch=$(cleanup::oss::snapshots::get_cutoff_epoch)

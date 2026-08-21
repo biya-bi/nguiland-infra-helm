@@ -12,7 +12,7 @@ readonly UTIL_DIR="$(cd "${CLEANUP_DIR}/../util" && pwd)"
 . "${UTIL_DIR}/artifactory.sh"
 
 cleanup::start() {
-  logger::log_info "Cleanup sidecar started"
+  logger::info "Cleanup sidecar started"
 
   local ready=0
 
@@ -21,21 +21,21 @@ cleanup::start() {
   while true; do
     if artifactory::is_ready; then
       if [[ "$ready" -ne 1 ]]; then
-        logger::log_info "Artifactory is now available"
+        logger::info "Artifactory is now available"
         ready=1
       fi
 
       cleanup::run_scripts
     else
       if [[ "$ready" -ne 0 ]]; then
-        logger::log_warn "Artifactory became unavailable"
+        logger::warn "Artifactory became unavailable"
         ready=0
       else
-        logger::log_debug "Artifactory still not ready"
+        logger::debug "Artifactory still not ready"
       fi
     fi
 
-    logger::log_info "Sleeping for ${sleep_duration_seconds}s..."
+    logger::info "Sleeping for ${sleep_duration_seconds}s..."
     sleep "${sleep_duration_seconds}"
   done
 }
@@ -45,23 +45,23 @@ cleanup::run_scripts() {
   local duration=300 # 5 minutes
   local exit_code
 
-  logger::log_info "Running cleanup scripts"
+  logger::info "Running cleanup scripts"
 
   # Run ALL scripts except logger and sidecar itself
   while IFS= read -r script; do
     ((++count))
 
-    logger::log_info "Executing: ${script}"
+    logger::info "Executing: ${script}"
 
     timeout "${duration}" bash "${script}"
     exit_code=$?
 
     if [[ $exit_code -eq 0 ]]; then
-      logger::log_info "Script succeeded: ${script}"
+      logger::info "Script succeeded: ${script}"
     elif [[ $exit_code -eq 124 ]]; then
-      logger::log_warn "Script timed out (${duration}s): ${script}"
+      logger::warn "Script timed out (${duration}s): ${script}"
     else
-      logger::log_warn "Script failed (exit ${exit_code}): ${script}"
+      logger::warn "Script failed (exit ${exit_code}): ${script}"
     fi
   done < <(
     find -L "${CLEANUP_DIR}" \
@@ -74,7 +74,7 @@ cleanup::run_scripts() {
   )
 
   if [[ "${count}" -eq 0 ]]; then
-    logger::log_warn "No cleanup scripts found"
+    logger::warn "No cleanup scripts found"
   fi
 }
 

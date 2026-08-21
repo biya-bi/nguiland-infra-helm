@@ -13,23 +13,23 @@ readonly UTIL_DIR="$(cd "${CLEANUP_DIR}/../util" && pwd)"
 
 cleanup::clear_archive() {
   if ! artifactory::is_ready; then
-    logger::log_warn "Artifactory not initialized yet, skipping cleanup"
+    logger::warn "Artifactory not initialized yet, skipping cleanup"
     return 0
   fi
 
-  logger::log_info "Clearing archive"
+  logger::info "Clearing archive"
 
   local dir="/var/opt/jfrog/artifactory"
 
   if [ ! -d "${dir}" ]; then
-    logger::log_error "Directory does not exist: ${dir}"
+    logger::error "Directory does not exist: ${dir}"
     return 0
   fi
 
   local system_yaml="/var/opt/jfrog/artifactory/etc/system.yaml"
 
   if [ ! -f "${system_yaml}" ]; then
-    logger::log_error "File does not exist: ${system_yaml}"
+    logger::error "File does not exist: ${system_yaml}"
     return 0
   fi
 
@@ -54,15 +54,15 @@ cleanup::clear_archive() {
     if [ -d "$archived_dir" ]; then
       if [ -n "$(find "$archived_dir" -mindepth 1 -print -quit 2>/dev/null)" ]; then
         find "$archived_dir" -mindepth 1 -delete
-        logger::log_info "Deleted contents of $archived_dir"
+        logger::info "Deleted contents of $archived_dir"
       else
-        logger::log_info "No files to delete in $archived_dir"
+        logger::info "No files to delete in $archived_dir"
       fi
     else
-      logger::log_warn "Directory does not exist: $archived_dir"
+      logger::warn "Directory does not exist: $archived_dir"
     fi
   else
-    logger::log_info "observability.consumption.allow is set to '$allow', skipping deletion"
+    logger::info "observability.consumption.allow is set to '$allow', skipping deletion"
   fi
 }
 

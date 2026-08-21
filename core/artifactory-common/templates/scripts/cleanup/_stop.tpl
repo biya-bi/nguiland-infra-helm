@@ -11,7 +11,7 @@ readonly UTIL_DIR="$(cd "${CLEANUP_DIR}/../util" && pwd)"
 . "${UTIL_DIR}/logger.sh"
 
 cleanup::stop() {
-  logger::log_info "Stopping cleanup sidecar"
+  logger::info "Stopping cleanup sidecar"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

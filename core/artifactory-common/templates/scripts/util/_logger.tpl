@@ -33,19 +33,19 @@ logger::log() {
     "$nl"
 }
 
-logger::log_debug() {
+logger::debug() {
   logger::log "${COLOR_CYAN}" "DEBUG" "$1" "${2:-true}" >&2
 }
 
-logger::log_info() {
+logger::info() {
   logger::log "${COLOR_GREEN}" "INFO" "$1" "${2:-true}"
 }
 
-logger::log_warn() {
+logger::warn() {
   logger::log "${COLOR_YELLOW}" "WARN" "$1" "${2:-true}" >&2
 }
 
-logger::log_error() {
+logger::error() {
   logger::log "${COLOR_RED}" "ERROR" "$1" "${2:-true}" >&2
 }
 {{- end -}}
