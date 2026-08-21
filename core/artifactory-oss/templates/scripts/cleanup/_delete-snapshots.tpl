@@ -227,7 +227,6 @@ cleanup::oss::snapshots::validate_response() {
   total=$(jq '.results | length' "$result_file")
   logger::log_info "Total artifacts returned: $total"
   if [ "$total" -eq 0 ]; then 
-    logger::log_info "No artifacts found";
     return "$NO_OP_STATUS";
   fi
 }
@@ -292,7 +291,6 @@ cleanup::oss::snapshots::perform_deletion() {
   logger::log_info "Files to delete: $delete_count"
 
   if [ "$delete_count" -eq 0 ]; then
-    logger::log_info "Nothing to delete"
     return "$NO_OP_STATUS"
   fi
 
