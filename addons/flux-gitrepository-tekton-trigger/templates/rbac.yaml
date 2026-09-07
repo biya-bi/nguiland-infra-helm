@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "flux-gitrepository-tekton-trigger.fullname" . }}
+rules:
+  - apiGroups:
+      - tekton.dev
+    resources:
+      - pipelineruns
+    verbs:
+      - create
+      - get
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "flux-gitrepository-tekton-trigger.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "flux-gitrepository-tekton-trigger.serviceAccountName" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "flux-gitrepository-tekton-trigger.fullname" . }}
